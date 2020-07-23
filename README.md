@@ -1,4 +1,4 @@
-# Yew Sandbox
+# Yew Playground
 
 ## Quickstart
 

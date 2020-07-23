@@ -3,15 +3,15 @@ use crate::services::locale;
 use yew::{html, Component, ComponentLink, ShouldRender};
 
 #[derive(Clone, Debug)]
-pub enum SandboxMessage {
+pub enum PlaygroundMessage {
     RunCode,
 }
 
-pub struct Sandbox {
+pub struct Playground {
     link: ComponentLink<Self>,
 }
-impl Component for Sandbox {
-    type Message = SandboxMessage;
+impl Component for Playground {
+    type Message = PlaygroundMessage;
     type Properties = ();
 
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
@@ -27,13 +27,13 @@ impl Component for Sandbox {
     }
 
     fn view(&self) -> yew::Html {
-        let run_onclick = self.link.callback(|_| SandboxMessage::RunCode);
+        let run_onclick = self.link.callback(|_| PlaygroundMessage::RunCode);
 
         html! {
             <div>
                 <Editor />
                 <div>
-                    <button onclick=run_onclick>{ locale::get("sandbox-run", None) }</button>
+                    <button onclick=run_onclick>{ locale::get("playground-run", None) }</button>
                 </div>
             </div>
         }

@@ -1,3 +1,3 @@
-title = Yew Sandbox
+title = Yew Playground
 
-sandbox-run = Run
+playground-run = Run

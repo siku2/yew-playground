@@ -1,7 +1,7 @@
 mod editor;
+mod playground;
 mod root;
-mod sandbox;
 
 pub use editor::Editor;
+pub use playground::Playground;
 pub use root::BootComponent;
-pub use sandbox::Sandbox;

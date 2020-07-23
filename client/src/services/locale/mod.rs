@@ -50,7 +50,10 @@ pub fn load_bundle(
             let resource_res = resp.into_body().into();
 
             let res = match resource_res {
-                Ok(resource) => Ok(load_fluent_resource(&lang_id, resource)),
+                Ok(resource) => {
+                    load_fluent_resource(&lang_id, resource);
+                    Ok(())
+                }
                 Err(err) => Err(err),
             };
             callback.emit(res);

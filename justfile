@@ -42,7 +42,7 @@ watch-server:
 # Print some basic instructions
 @help:
     just _print_line
-    echo "YEW SANDBOX"
+    echo "YEW PLAYGROUND"
     echo "-----------"
     echo "To get started, run $(just _fmt_cmd "just watch-server") in one console and $(just _fmt_cmd "just watch-client") in another."
     echo "Use the link printed by the watch-client console to open the local website."
