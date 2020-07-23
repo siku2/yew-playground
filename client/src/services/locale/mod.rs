@@ -33,6 +33,8 @@ fn load_fluent_resource(lang_id: &LanguageIdentifier, resource: FluentResource) 
     BUNDLE.with(|bundle| bundle.borrow_mut().replace(new_bundle));
 }
 
+#[derive(Debug)]
+#[must_use = "loading is aborted as soon as the task is dropped"]
 pub struct LoadBundleTask(fetch::Task);
 
 /// Load the bundle for the given language.

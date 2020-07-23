@@ -1,3 +1,4 @@
+use super::Sandbox;
 use crate::services::locale::{self, LoadBundleTask};
 use yew::{html, Component, ComponentLink, Html, ShouldRender};
 
@@ -51,6 +52,7 @@ impl Component for Root {
             <>
                 <Header />
                 { lang }
+                <Sandbox />
             </>
         }
     }

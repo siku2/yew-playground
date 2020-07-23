@@ -4,6 +4,7 @@ build-client:
     @cd client/build && rm .gitignore package.json
     @just _info "adding static files"
     cp -r client/static/* client/build/
+    @just _info "DONE"
 
 build-server:
     @just _info "building server"
@@ -15,14 +16,21 @@ build-server:
     just _print_line
     just build-server
 
-run-client port="8000":
-    @just build-client
-    @just _info "starting the client"
+serve-client ip="127.0.0.1" port="8000":
+    @just _info "serving client"
     @just _assert_crate_installed simple-http-server
-    simple-http-server --index --nocache --ip 127.0.0.1 --port "{{port}}" --try-file client/build/index.html -- client/build
+    simple-http-server --index --nocache --ip "{{ip}}" --port "{{port}}" --try-file client/build/index.html -- client/build
+
+run-client:
+    @just build-client
+    @just serve-client
 
 watch-client:
-    @just _watchexec client "just run-client"
+    #!/usr/bin/env sh
+    just _watchexec client "just build-client" &
+    just serve-client &
+
+    wait
 
 run-server:
     @just _info "starting the server"
@@ -50,7 +58,7 @@ _assert_crate_installed crate:
 
 _watchexec path command:
     @just _assert_crate_installed watchexec
-    watchexec --clear --restart --exts css,html,rs,toml --ignore build --watch "{{path}}" "{{command}}"
+    watchexec --clear --restart --exts css,ftl,html,rs,toml --ignore build --watch "{{path}}" "{{command}}"
 
 # Formatting helpers
 

@@ -1,3 +1,7 @@
+mod editor;
 mod root;
+mod sandbox;
 
-pub use root::{BootComponent, Header, Root};
+pub use editor::Editor;
+pub use root::BootComponent;
+pub use sandbox::Sandbox;

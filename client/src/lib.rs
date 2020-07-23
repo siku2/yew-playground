@@ -2,7 +2,6 @@ use wasm_bindgen::prelude::*;
 
 mod agents;
 mod components;
-mod editor;
 mod services;
 
 #[wasm_bindgen(start)]

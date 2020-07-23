@@ -7,8 +7,8 @@ use yew::{
     Callback,
 };
 
-#[must_use]
 #[derive(Debug)]
+#[must_use]
 pub enum FluentFetchResult {
     Ok(FluentResource),
     FetchError(anyhow::Error),
@@ -38,10 +38,7 @@ impl Into<Result<FluentResource, anyhow::Error>> for FluentFetchResult {
 pub type Task = FetchTask;
 
 /// Fetch the `FluentResource` for the given language.
-pub fn fetch(
-    lang: &str,
-    callback: Callback<Response<FluentFetchResult>>,
-) -> anyhow::Result<Task> {
+pub fn fetch(lang: &str, callback: Callback<Response<FluentFetchResult>>) -> anyhow::Result<Task> {
     let req = Request::get(format!("/locale/{}.ftl", lang))
         .body(Nothing)
         .unwrap();
