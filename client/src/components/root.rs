@@ -2,32 +2,6 @@ use super::Playground;
 use crate::services::locale::{self, LoadBundleTask};
 use yew::{html, Component, ComponentLink, Html, ShouldRender};
 
-pub struct Header;
-impl Component for Header {
-    type Message = ();
-    type Properties = ();
-
-    fn create(_props: Self::Properties, _link: ComponentLink<Self>) -> Self {
-        Self
-    }
-
-    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
-        true
-    }
-
-    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
-        true
-    }
-
-    fn view(&self) -> Html {
-        html! {
-            <header>
-                <h1>{ locale::get("title", None) }</h1>
-            </header>
-        }
-    }
-}
-
 pub struct Root;
 impl Component for Root {
     type Message = ();
@@ -50,8 +24,12 @@ impl Component for Root {
             .map_or_else(|| "unknown".to_string(), |lang_id| lang_id.to_string());
         html! {
             <>
-                <Header />
+                <header>
+                    <h1>{ locale::get("title", None) }</h1>
+                </header>
+
                 { lang }
+
                 <Playground />
             </>
         }
