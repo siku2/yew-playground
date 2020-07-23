@@ -8,5 +8,16 @@ edition = "2018"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+anyhow = "1.0"
+console_log = { version = "0.2", features = ["color"], optional = true }
+http = "0.2"
+log = "0.4"
+fluent = "0.12"
+fluent-syntax = "0.9"
+thiserror = "1.0"
+unic-langid = "0.9"
 wasm-bindgen = "0.2"
 yew = "0.17"
+
+[features]
+default = ["console_log"]

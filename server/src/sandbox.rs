@@ -1,5 +1,4 @@
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct CompileRequest {
     pub code: String,
 }
-

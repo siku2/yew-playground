@@ -1,9 +1,14 @@
 use wasm_bindgen::prelude::*;
-use yew::App;
 
-mod app;
+mod agents;
+mod components;
+mod editor;
+mod services;
 
 #[wasm_bindgen(start)]
 pub fn run_app() {
-    App::<app::Root>::new().mount_to_body();
+    #[cfg(feature = "console_log")]
+    console_log::init().expect("failed to initialize logging");
+
+    yew::start_app::<components::BootComponent>();
 }

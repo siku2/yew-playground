@@ -1,9 +1,9 @@
 build-client:
     @just _info "building client"
-    wasm-pack build client --target web --no-typescript --out-dir build --out-name app
+    wasm-pack build --dev --target web --no-typescript --out-dir build --out-name app client
     @cd client/build && rm .gitignore package.json
     @just _info "adding static files"
-    cp client/static/* client/build/
+    cp -r client/static/* client/build/
 
 build-server:
     @just _info "building server"
