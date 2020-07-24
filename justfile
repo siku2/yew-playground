@@ -1,34 +1,34 @@
-build-client:
-    @just _info "building client"
-    wasm-pack build --dev --target web --no-typescript --out-dir build --out-name app client
-    @cd client/build && rm .gitignore package.json
+build-frontend:
+    @just _info "building frontend"
+    wasm-pack build --dev --target web --no-typescript --out-dir build --out-name app frontend
+    @cd frontend/build && rm .gitignore package.json
     @just _info "adding static files"
-    cp -r client/static/* client/build/
+    cp -r frontend/static/* frontend/build/
     @just _info "DONE"
 
 build-server:
     @just _info "building server"
     cargo build --package server
 
-# Build both the client and the server
+# Build both the frontend and the server
 @build:
-    just build-client
+    just build-frontend
     just _print_line
     just build-server
 
-serve-client ip="127.0.0.1" port="8000":
-    @just _info "serving client"
+serve-frontend ip="127.0.0.1" port="8000":
+    @just _info "serving frontend"
     @just _assert_crate_installed simple-http-server
-    simple-http-server --index --nocache --ip "{{ip}}" --port "{{port}}" --try-file client/build/index.html -- client/build
+    simple-http-server --index --nocache --ip "{{ip}}" --port "{{port}}" --try-file frontend/build/index.html -- frontend/build
 
-run-client:
-    @just build-client
-    @just serve-client
+run-frontend:
+    @just build-frontend
+    @just serve-frontend
 
-watch-client:
+watch-frontend:
     #!/usr/bin/env sh
-    just _watchexec client "just build-client" &
-    just serve-client &
+    just _watchexec frontend "just build-frontend" &
+    just serve-frontend &
 
     wait
 
@@ -44,8 +44,8 @@ watch-server:
     just _print_line
     echo "YEW PLAYGROUND"
     echo "-----------"
-    echo "To get started, run $(just _fmt_cmd "just watch-server") in one console and $(just _fmt_cmd "just watch-client") in another."
-    echo "Use the link printed by the watch-client console to open the local website."
+    echo "To get started, run $(just _fmt_cmd "just watch-server") in one console and $(just _fmt_cmd "just watch-frontend") in another."
+    echo "Use the link printed by the watch-frontend console to open the local website."
     just _print_line
 
 # Helper functions

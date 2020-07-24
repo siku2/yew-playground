@@ -1,6 +1,6 @@
 use super::Editor;
 use crate::services::locale;
-use yew::{html, Component, ComponentLink, ShouldRender};
+use yew::{html, Component, ComponentLink, ShouldRender, Html};
 
 #[derive(Clone, Debug)]
 pub enum PlaygroundMessage {
@@ -26,7 +26,7 @@ impl Component for Playground {
         false
     }
 
-    fn view(&self) -> yew::Html {
+    fn view(&self) -> Html {
         let run_onclick = self.link.callback(|_| PlaygroundMessage::RunCode);
 
         html! {

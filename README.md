@@ -23,4 +23,4 @@ cargo install just watchexec simple-http-server
 You can run `just --list` to list all possible commands.
 You can also use `just help` for a bit of help.
 
-The most important ones are `just watch-server` and `just watch-client`.
+The most important ones are `just watch-server` and `just watch-frontend`.
