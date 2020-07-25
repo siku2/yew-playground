@@ -1,6 +1,6 @@
 use super::Editor;
 use crate::services::locale;
-use yew::{html, Component, ComponentLink, ShouldRender, Html};
+use yew::{html, Component, ComponentLink, Html, ShouldRender};
 
 #[derive(Clone, Debug)]
 pub enum PlaygroundMessage {
