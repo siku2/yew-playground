@@ -1,5 +1,5 @@
 use commands::DockerCommandExt;
-use error::{Error, Result};
+pub use error::{Error, Result};
 use request::{
     BacktraceRequest,
     ClippyRequest,
@@ -22,8 +22,8 @@ use tempdir::TempDir;
 
 mod commands;
 mod error;
-mod request;
-mod response;
+pub mod request;
+pub mod response;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Channel {

@@ -23,7 +23,6 @@ pub struct CompileRequest {
     pub channel: Channel,
     pub mode: Mode,
     pub edition: Option<Edition>,
-    pub tests: bool,
     pub backtrace: bool,
     pub code: String,
 }
