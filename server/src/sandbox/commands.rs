@@ -1,6 +1,5 @@
 use super::{
-    request::{BacktraceRequest, EditionRequest},
-    vec_to_str,
+    helpers::{self, BacktraceRequest, EditionRequest},
     Channel,
     Error,
     Mode,
@@ -26,7 +25,10 @@ impl DockerCommandExt for Command {
         if let Some(edition) = req.edition() {
             self.args(&[
                 "--env",
-                &format!("PLAYGROUND_EDITION={}", edition.cargo_ident()),
+                &format!(
+                    "PLAYGROUND_EDITION={}",
+                    helpers::cargo_ident_for_edition(edition)
+                ),
             ]);
         }
     }
@@ -82,7 +84,7 @@ pub struct CrateInformation {
 
 pub fn list_crates() -> Result<Vec<CrateInformation>> {
     let mut command = docker_run();
-    command.args(&[Channel::Stable.compiler_container_name()]);
+    command.args(&[helpers::container_name_for_channel(Channel::Stable)]);
     command.args(&["cat", "crate-information.json"]);
     let output = run_with_timeout(command)?;
 
@@ -94,7 +96,7 @@ pub fn list_crates() -> Result<Vec<CrateInformation>> {
     Ok(crates)
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct Version {
     pub release: String,
     pub commit_hash: String,
@@ -103,11 +105,11 @@ pub struct Version {
 
 pub fn rustc_version(channel: Channel) -> Result<Version> {
     let mut command = docker_run();
-    command.args(&[channel.compiler_container_name()]);
+    command.args(&[helpers::container_name_for_channel(channel)]);
     command.args(&["rustc", "--version", "--verbose"]);
 
     let output = run_with_timeout(command)?;
-    let version_output = vec_to_str(output.stdout)?;
+    let version_output = helpers::string_from_utf8_vec(output.stdout)?;
 
     let mut info: BTreeMap<String, String> = version_output
         .lines()
@@ -151,7 +153,7 @@ pub fn version_clippy() -> Result<Version> {
 // Parses versions of the shape `toolname 0.0.0 (0000000 0000-00-00)`
 fn cargo_tool_version(command: Command) -> Result<Version> {
     let output = run_with_timeout(command)?;
-    let version_output = vec_to_str(output.stdout)?;
+    let version_output = helpers::string_from_utf8_vec(output.stdout)?;
     let mut parts = version_output.split_whitespace().fuse().skip(1);
 
     let release = parts.next().unwrap_or("").into();

@@ -1,67 +1,31 @@
 use commands::DockerCommandExt;
 pub use error::{Error, Result};
-use request::{
-    BacktraceRequest,
+use helpers::{BacktraceRequest, EditionRequest};
+use protocol::{
+    Channel,
     ClippyRequest,
+    ClippyResponse,
     CompileRequest,
-    EditionRequest,
+    CompileResponse,
     FormatRequest,
+    FormatResponse,
     MacroExpansionRequest,
+    MacroExpansionResponse,
+    Mode,
 };
-use response::{ClippyResponse, CompileResponse, FormatResponse, MacroExpansionResponse};
 use std::{
     ffi::OsStr,
     fmt::Write,
-    fs::{self, File, Permissions},
-    io::{BufReader, ErrorKind, Read},
+    fs::{self, Permissions},
     os::unix::fs::PermissionsExt,
-    path::{Path, PathBuf},
+    path::PathBuf,
     process::Command,
 };
 use tempdir::TempDir;
 
 mod commands;
 mod error;
-pub mod request;
-pub mod response;
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Channel {
-    Stable,
-    Nightly,
-}
-impl Channel {
-    fn compiler_container_name(&self) -> &'static str {
-        use Channel::*;
-
-        match *self {
-            Stable => "compiler-stable",
-            Nightly => "compiler-nightly",
-        }
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum Mode {
-    Debug,
-    Release,
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub enum Edition {
-    Rust2015,
-    Rust2018,
-}
-impl Edition {
-    fn cargo_ident(&self) -> &'static str {
-        use Edition::*;
-
-        match *self {
-            Rust2015 => "2015",
-            Rust2018 => "2018",
-        }
-    }
-}
+mod helpers;
 
 pub struct Sandbox {
     _scratch: TempDir,
@@ -100,11 +64,11 @@ impl Sandbox {
             .map(|entry| entry.path())
             .find(|path| path.extension() == Some(OsStr::new("wat")));
 
-        let stdout = vec_to_str(output.stdout)?;
-        let mut stderr = vec_to_str(output.stderr)?;
+        let stdout = helpers::string_from_utf8_vec(output.stdout)?;
+        let mut stderr = helpers::string_from_utf8_vec(output.stderr)?;
 
         let code = match file {
-            Some(file) => read_file_to_string(&file)?.unwrap_or_else(String::new),
+            Some(file) => helpers::read_file_to_string(&file)?.unwrap_or_else(String::new),
             None => {
                 // If we didn't find the file, it's *most* likely that
                 // the user's code was invalid. Tack on our own error
@@ -132,9 +96,10 @@ impl Sandbox {
 
         Ok(FormatResponse {
             success: output.status.success(),
-            code: read_file_to_string(self.input_file.as_ref())?.ok_or(Error::OutputMissing)?,
-            stdout: vec_to_str(output.stdout)?,
-            stderr: vec_to_str(output.stderr)?,
+            code: helpers::read_file_to_string(self.input_file.as_ref())?
+                .ok_or(Error::OutputMissing)?,
+            stdout: helpers::string_from_utf8_vec(output.stdout)?,
+            stderr: helpers::string_from_utf8_vec(output.stderr)?,
         })
     }
 
@@ -146,8 +111,8 @@ impl Sandbox {
 
         Ok(ClippyResponse {
             success: output.status.success(),
-            stdout: vec_to_str(output.stdout)?,
-            stderr: vec_to_str(output.stderr)?,
+            stdout: helpers::string_from_utf8_vec(output.stdout)?,
+            stderr: helpers::string_from_utf8_vec(output.stderr)?,
         })
     }
 
@@ -159,8 +124,8 @@ impl Sandbox {
 
         Ok(MacroExpansionResponse {
             success: output.status.success(),
-            stdout: vec_to_str(output.stdout)?,
-            stderr: vec_to_str(output.stderr)?,
+            stdout: helpers::string_from_utf8_vec(output.stdout)?,
+            stderr: helpers::string_from_utf8_vec(output.stderr)?,
         })
     }
 
@@ -188,7 +153,7 @@ impl Sandbox {
 
         let execution_cmd = commands::wasm_pack_build(channel, mode);
 
-        cmd.arg(&channel.compiler_container_name())
+        cmd.arg(&helpers::container_name_for_channel(channel))
             .args(&execution_cmd);
 
         log::debug!("Compilation command is {:?}", cmd);
@@ -224,7 +189,7 @@ impl Sandbox {
         let mut cmd = self.docker_command();
         cmd.apply_edition(req);
 
-        cmd.arg(&Channel::Nightly.compiler_container_name())
+        cmd.arg(helpers::container_name_for_channel(Channel::Nightly))
             .args(&["cargo", "expand"]);
 
         log::debug!("Macro expansion command is {:?}", cmd);
@@ -250,24 +215,6 @@ impl Sandbox {
         cmd
     }
 }
-
-fn vec_to_str(v: Vec<u8>) -> Result<String> {
-    String::from_utf8(v).map_err(Error::OutputNotUtf8)
-}
-
-fn read_file_to_string(path: &Path) -> Result<Option<String>> {
-    let f = match File::open(path) {
-        Ok(f) => f,
-        Err(ref e) if e.kind() == ErrorKind::NotFound => return Ok(None),
-        Err(e) => return Err(Error::UnableToReadOutput(e)),
-    };
-    let mut f = BufReader::new(f);
-    let mut s = String::new();
-    f.read_to_string(&mut s)
-        .map_err(Error::UnableToReadOutput)?;
-    Ok(Some(s))
-}
-
 // We must create a world-writable files (rustfmt) and directories so that the
 // process inside the Docker container can write into it.
 //
