@@ -1,10 +1,10 @@
 # Yew Playground
 
-## Quickstart
+## Getting started
 
-### Using the nightly Rust toolchain
+### Nightly toolchain
 
-This project requires the Rust nightly to compile.
+This project requires nightly to compile.
 Use the following commands to install the nightly toolchain and set it as the active toolchain for the yew-playground directory.
 
 ```bash
@@ -15,26 +15,65 @@ rustup toolchain install nightly
 rustup override set nightly
 ```
 
-### Commands
+### CLI
 
-Run the following command to install the required dependencies:
+This project uses the command runner [just](https://github.com/casey/just) to make performing various tasks a lot easier.
+While not strictly required, it is highly recommended that you install it.
+
+Additionally, [watchexec](https://github.com/watchexec/watchexec) is used to watch for file changes.
+If you don't want to manually rebuild every time you change something you should install it too.
+
+Run the following command to install these dependencies:
 
 ```bash
+# install 'just' and 'watchexec'
 cargo install just watchexec
 ```
 
-You can run `just --list` to list all possible commands.
-You can also use `just help` for a bit of help.
+### Building the Docker images
 
-The most important ones are `just watch`.
+For security reasons the compiler and all other tools run in a docker container.
+The images for these containers need to be built before the server can do anything.
 
-#### Building the Docker images
+> Technically you don't need to have these images if you're solely interested in the frontend.
+> Just keep in mind that you can't use most of the frontend's features without a working server.
 
-just server/config
+Use the following command to build all required images:
 
+```bash
+just docker/build
+```
 
-## Reverse proxy
+This will take a very long time.
+Go drink a coffee (or three) while you're waiting.
+
+### Running the playground
+
+Now we're finally ready to get to the fun part.
+
+All you need to get things running is the following command:
+
+```bash
+just watch
+```
+
+This command builds the frontend and starts the server.
+As the name implies, the command watches for changes.
+If you modify either the frontend or the server it will automatically update (A manual reload in the browser is still required).
+
+If you only want to start the server without updating on every change you can use the following command:
+
+```bash
+just run
+```
+
+---
+
+There are many more commands. Use `just --list` to list all possible commands.
+You can also run `just help` for more detailed instructions.
+
+## Deploying
 
 <!-- TODO -->
 
-Requires a reverse proxy to forward `$1.<HOST>/$2` to `<HOST>/sandbox/$1/$2`.
+A reverse proxy to forward `$1.<HOST>/$2` to `<HOST>/sandbox/$1/$2` is required.

@@ -25,7 +25,11 @@ watch:
 # Build the frontend.
 build-frontend out_dir="www":
     @just _info "building frontend"
-    wasm-pack build --dev --target web --no-typescript --out-dir "$(pwd)/{{out_dir}}" --out-name app frontend
+    wasm-pack build --dev --no-typescript \
+        --out-dir "$(pwd)/{{out_dir}}" \
+        --out-name app \
+        --target web \
+        frontend
     @cd "{{out_dir}}" && rm .gitignore package.json
     @just _info "adding static files"
     cp -r frontend/static/* "{{out_dir}}"
@@ -44,7 +48,7 @@ build-server:
 
 run-server:
     @just _info "starting the server"
-    @just server/config/docker/check
+    @just docker/check
     cargo run --package server
 
 watch-server:
@@ -71,7 +75,10 @@ _assert_crate_installed crate:
 
 _watchexec path command:
     @just _assert_crate_installed watchexec
-    watchexec --clear --restart --exts css,ftl,html,rs,toml --watch "{{path}}" "{{command}}"
+    watchexec --clear --restart \
+        --exts css,ftl,html,rs,toml \
+        --watch "{{path}}" \
+        "{{command}}"
 
 
 # FORMATTING
