@@ -1,25 +1,55 @@
 use super::Editor;
-use crate::services::locale;
-use yew::{html, Component, ComponentLink, Html, ShouldRender};
+use crate::services::{
+    api::{self, Channel, CompileRequest, CompileResponse, Mode},
+    locale,
+};
+use yew::{html, services::fetch::FetchTask, Component, ComponentLink, Html, ShouldRender};
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum PlaygroundMessage {
     RunCode,
+    OnCompileResponse(anyhow::Result<CompileResponse>),
 }
 
 pub struct Playground {
     link: ComponentLink<Self>,
+    fetch_task: Option<FetchTask>,
 }
 impl Component for Playground {
     type Message = PlaygroundMessage;
     type Properties = ();
 
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        Self { link }
+        Self {
+            link,
+            fetch_task: None,
+        }
     }
 
-    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
-        false
+    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        use PlaygroundMessage::*;
+
+        match msg {
+            RunCode => {
+                let task = api::compile_with_request(
+                    &CompileRequest {
+                        channel: Channel::Stable,
+                        mode: Mode::Debug,
+                        edition: None,
+                        backtrace: false,
+                        code: String::from("hello world!"),
+                    },
+                    self.link.callback(OnCompileResponse),
+                );
+                self.fetch_task = task.ok();
+                false
+            }
+            OnCompileResponse(res) => {
+                self.fetch_task = None;
+                log::info!("{:?}", res);
+                true
+            }
+        }
     }
 
     fn change(&mut self, _props: Self::Properties) -> ShouldRender {

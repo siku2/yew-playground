@@ -12,7 +12,6 @@ anyhow = "1.0"
 console_log = { version = "0.2", features = ["color"], optional = true }
 fluent = "0.12"
 fluent-syntax = "0.9"
-http = "0.2"
 log = "0.4"
 protocol = { path = "../protocol" }
 thiserror = "1.0"

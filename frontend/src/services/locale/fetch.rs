@@ -1,9 +1,8 @@
 use fluent::FluentResource;
 use fluent_syntax::parser::ParserError;
-use http::{Request, Response};
 use yew::{
     format::{Nothing, Text},
-    services::fetch::{FetchService, FetchTask},
+    services::fetch::{FetchService, FetchTask, Request, Response},
     Callback,
 };
 
@@ -35,10 +34,11 @@ impl Into<Result<FluentResource, anyhow::Error>> for FluentFetchResult {
     }
 }
 
-pub type Task = FetchTask;
-
 /// Fetch the `FluentResource` for the given language.
-pub fn fetch(lang: &str, callback: Callback<Response<FluentFetchResult>>) -> anyhow::Result<Task> {
+pub fn fetch(
+    lang: &str,
+    callback: Callback<Response<FluentFetchResult>>,
+) -> anyhow::Result<FetchTask> {
     let req = Request::get(format!("/locale/{}.ftl", lang))
         .body(Nothing)
         .unwrap();

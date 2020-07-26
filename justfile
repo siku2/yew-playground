@@ -1,14 +1,17 @@
-build-frontend:
-    @just _info "building frontend"
-    wasm-pack build --dev --target web --no-typescript --out-dir build --out-name app frontend
-    @cd frontend/build && rm .gitignore package.json
-    @just _info "adding static files"
-    cp -r frontend/static/* frontend/build/
-    @just _info "DONE"
+# COMBINED
 
-build-server:
-    @just _info "building server"
-    cargo build --package server
+# Run the server and watch for changes in both the frontend and the server.
+watch:
+    #!/usr/bin/env sh
+    just watch-frontend &
+    just watch-server &
+
+    wait
+
+# Build the frontend and then run the server.
+@run:
+    just build-frontend
+    just run-server
 
 # Build both the frontend and the server
 @build:
@@ -16,21 +19,28 @@ build-server:
     just _print_line
     just build-server
 
-serve-frontend ip="127.0.0.1" port="8000":
-    @just _info "serving frontend"
-    @just _assert_crate_installed simple-http-server
-    simple-http-server --index --nocache --ip "{{ip}}" --port "{{port}}" --try-file frontend/build/index.html -- frontend/build
 
-run-frontend:
-    @just build-frontend
-    @just serve-frontend
+# FRONTEND
+
+# Build the frontend.
+build-frontend out_dir="www":
+    @just _info "building frontend"
+    wasm-pack build --dev --target web --no-typescript --out-dir "$(pwd)/{{out_dir}}" --out-name app frontend
+    @cd "{{out_dir}}" && rm .gitignore package.json
+    @just _info "adding static files"
+    cp -r frontend/static/* "{{out_dir}}"
+    @just _info "DONE"
 
 watch-frontend:
-    #!/usr/bin/env sh
-    just _watchexec frontend "just build-frontend" &
-    just serve-frontend &
+    @just _watchexec frontend "just build-frontend"
 
-    wait
+
+# SERVER
+
+# Compile the server
+build-server:
+    @just _info "building server"
+    cargo build --package server
 
 run-server:
     @just _info "starting the server"
@@ -40,16 +50,18 @@ run-server:
 watch-server:
     @just _watchexec server "just run-server"
 
+
 # Print some basic instructions
 @help:
     just _print_line
     echo "YEW PLAYGROUND"
     echo "-----------"
-    echo "To get started, run $(just _fmt_cmd "just watch-server") in one console and $(just _fmt_cmd "just watch-frontend") in another."
-    echo "Use the link printed by the watch-frontend console to open the local website."
+    echo "To get started, run $(just _fmt_cmd "just watch")."
+    echo "Use the link console to open the local website."
     just _print_line
 
-# Helper functions
+
+# HELPERS
 
 _assert_crate_installed crate:
     #!/usr/bin/env sh
@@ -59,9 +71,10 @@ _assert_crate_installed crate:
 
 _watchexec path command:
     @just _assert_crate_installed watchexec
-    watchexec --clear --restart --exts css,ftl,html,rs,toml --ignore build --watch "{{path}}" "{{command}}"
+    watchexec --clear --restart --exts css,ftl,html,rs,toml --watch "{{path}}" "{{command}}"
 
-# Formatting helpers
+
+# FORMATTING
 
 _print_line:
     #!/usr/bin/env sh

@@ -1,12 +1,14 @@
 use fetch::FluentFetchResult;
 use fluent::{FluentArgs, FluentBundle, FluentError, FluentMessage, FluentResource};
-use http::Response;
 use std::{
     cell::{BorrowError, RefCell},
     str::FromStr,
 };
 use unic_langid::LanguageIdentifier;
-use yew::Callback;
+use yew::{
+    services::fetch::{FetchTask, Response},
+    Callback,
+};
 
 mod fetch;
 
@@ -35,7 +37,7 @@ fn load_fluent_resource(lang_id: &LanguageIdentifier, resource: FluentResource) 
 
 #[derive(Debug)]
 #[must_use = "loading is aborted as soon as the task is dropped"]
-pub struct LoadBundleTask(fetch::Task);
+pub struct LoadBundleTask(FetchTask);
 
 /// Load the bundle for the given language.
 pub fn load_bundle(
@@ -66,6 +68,7 @@ pub fn load_bundle(
 pub fn load_default_bundle(
     callback: Callback<anyhow::Result<()>>,
 ) -> anyhow::Result<LoadBundleTask> {
+    // TODO make language configurable and try browser language if not set
     load_bundle("en-GB", callback)
 }
 
