@@ -2,10 +2,10 @@
 
 ## Getting started
 
-### Nightly toolchain
+### Setting up the nightly toolchain
 
-This project requires nightly to compile.
-Use the following commands to install the nightly toolchain and set it as the active toolchain for the yew-playground directory.
+This project requires the nightly version of Rust to compile.
+Use the following commands to install the nightly toolchain and set it as the active toolchain for the _yew-playground_ directory.
 
 ```bash
 # add the nightly toolchain
@@ -15,7 +15,7 @@ rustup toolchain install nightly
 rustup override set nightly
 ```
 
-### CLI
+### Installing dependencies
 
 This project uses the command runner [just](https://github.com/casey/just) to make performing various tasks a lot easier.
 While not strictly required, it is highly recommended that you install it.
@@ -26,7 +26,6 @@ If you don't want to manually rebuild every time you change something you should
 Run the following command to install these dependencies:
 
 ```bash
-# install 'just' and 'watchexec'
 cargo install just watchexec
 ```
 
@@ -46,6 +45,8 @@ just docker/build
 
 This will take a very long time.
 Go drink a coffee (or three) while you're waiting.
+
+For more details, please visit the [docker](docker) directory.
 
 ### Running the playground
 
@@ -70,7 +71,6 @@ just run
 ---
 
 There are many more commands. Use `just --list` to list all possible commands.
-You can also run `just help` for more detailed instructions.
 
 ## Deploying
 

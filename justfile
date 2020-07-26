@@ -13,7 +13,7 @@ watch:
     just build-frontend
     just run-server
 
-# Build both the frontend and the server
+# Build both the frontend and the server.
 @build:
     just build-frontend
     just _print_line
@@ -35,34 +35,28 @@ build-frontend out_dir="www":
     cp -r frontend/static/* "{{out_dir}}"
     @just _info "DONE"
 
+# Build the frontend and watch for changes.
 watch-frontend:
     @just _watchexec frontend "just build-frontend"
 
 
 # SERVER
 
-# Compile the server
+# Compile the server.
 build-server:
     @just _info "building server"
     cargo build --package server
 
+# Start the server.
+# This assumes that the frontend and the docker images have already been built.
 run-server:
     @just _info "starting the server"
     @just docker/check
     cargo run --package server
 
+# Start the server and update on changes.
 watch-server:
     @just _watchexec server "just run-server"
-
-
-# Print some basic instructions
-@help:
-    just _print_line
-    echo "YEW PLAYGROUND"
-    echo "-----------"
-    echo "To get started, run $(just _fmt_cmd "just watch")."
-    echo "Use the link console to open the local website."
-    just _print_line
 
 
 # HELPERS

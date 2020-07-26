@@ -51,6 +51,7 @@ _build-tool tool channel="nightly":
         --build-arg channel="{{channel}}" \
         "{{tool}}"
 
+# Prepare the base image for the given channel.
 prepare-base channel:
     #!/usr/bin/env sh
     just _assert_docker_installed
