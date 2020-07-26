@@ -8,7 +8,7 @@
 
 ### Setting up the nightly toolchain
 
-This project requires the nightly version of Rust to compile.
+This project requires the nightly version of Rust.
 Use the following commands to install the nightly toolchain and set it as the active toolchain for the _yew-playground_ directory.
 
 ```bash
@@ -19,10 +19,11 @@ rustup toolchain install nightly
 rustup override set nightly
 ```
 
+> This will only activate it for the _yew-playground_ directory. All your other projects are safe :).
+
 ### Installing dependencies
 
 This project uses the command runner [just](https://github.com/casey/just) to make performing various tasks a lot easier.
-While not strictly required, it is highly recommended that you install it.
 
 Additionally, [watchexec](https://github.com/watchexec/watchexec) is used to watch for file changes.
 If you don't want to manually rebuild every time you change something you should install it too.
@@ -38,7 +39,7 @@ cargo install just watchexec
 For security reasons the compiler and all other tools run in a docker container.
 The images for these containers need to be built before the server can do anything.
 
-> Technically you don't need to have these images if you're solely interested in the frontend.
+> Technically you don't need to build them if you're solely interested in the frontend.
 > Just keep in mind that you can't use most of the frontend's features without a working server.
 
 Use the following command to build all required images:
@@ -55,7 +56,6 @@ For more details, please visit the [docker](docker) directory.
 ### Running the playground
 
 Now we're finally ready to get to the fun part.
-
 All you need to get things running is the following command:
 
 ```bash
@@ -74,7 +74,8 @@ just run
 
 ---
 
-There are many more commands. Use `just --list` to list all possible commands.
+Use `just --list` to list all available commands.
+There are a lot more than the ones listed above.
 
 ## Deploying
 

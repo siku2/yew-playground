@@ -1,5 +1,7 @@
 # Docker Images
 
+<!-- TODO explain how the docker images are designed -->
+
 ## Build all images
 
 ```sh

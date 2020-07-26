@@ -37,7 +37,8 @@ build-frontend out_dir="www":
 
 # Build the frontend and watch for changes.
 watch-frontend:
-    @just _watchexec frontend "just build-frontend"
+    @just _watch "just build-frontend" \
+        "frontend/src" "frontend/static" "frontend/Cargo.toml"
 
 
 # SERVER
@@ -56,7 +57,9 @@ run-server:
 
 # Start the server and update on changes.
 watch-server:
-    @just _watchexec server "just run-server"
+    @just _watch "just run-server" \
+        "protocol/src" "protocol/Cargo.toml" \
+        "server/src" "server/Cargo.toml"
 
 
 # HELPERS
@@ -67,11 +70,17 @@ _assert_crate_installed crate:
         just _error "'{{crate}}' isn't installed. Please run $(just _fmt_cmd "cargo install {{crate}}") to install it"
     fi
 
-_watchexec path command:
-    @just _assert_crate_installed watchexec
-    watchexec --clear --restart \
-        --exts css,ftl,html,rs,toml \
-        --watch "{{path}}" \
+_watch command +paths:
+    #!/usr/bin/env sh
+    just _assert_crate_installed watchexec
+
+    watch_opts=()
+    for path in {{paths}}; do
+        watch_opts+=("--watch $path")
+    done
+
+    watchexec --restart \
+        ${watch_opts[@]} \
         "{{command}}"
 
 
