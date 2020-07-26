@@ -8,7 +8,7 @@
 # add the nightly toolchain
 rustup toolchain install nightly
 
-# use the nightly toolchain for the yew-playground directory.
+# use the nightly toolchain for the current directory.
 rustup override set nightly
 ```
 

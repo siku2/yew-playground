@@ -1,10 +1,11 @@
 #![feature(proc_macro_hygiene, decl_macro)]
 
 use error::{Error, Result};
+use rocket::http::RawStr;
 use rocket_contrib::json::Json;
 use sandbox::{request, Channel, Edition, Mode, Sandbox};
 use serde::Deserialize;
-use std::convert::TryInto;
+use std::{convert::TryInto, path::PathBuf};
 
 mod error;
 mod sandbox;
@@ -44,6 +45,11 @@ fn compile(req: Json<CompileRequest>) -> Result<String> {
     Ok(format!("ok"))
 }
 
+#[rocket::get("/sandbox/<sandbox>/<path..>")]
+fn get_sandbox_file(sandbox: &RawStr, path: PathBuf) -> Result<String> {
+    Ok("hello".to_owned())
+}
+
 fn main() {
     rocket::ignite()
         .mount("/", rocket::routes![compile])
@@ -70,6 +76,7 @@ fn parse_mode(s: &str) -> Result<Mode> {
 fn parse_edition(s: &str) -> Result<Option<Edition>> {
     Ok(match s {
         "" => None,
+        // TODO remove support for 2015
         "2015" => Some(Edition::Rust2015),
         "2018" => Some(Edition::Rust2018),
         value => return Err(Error::InvalidEdition(value.to_owned())),

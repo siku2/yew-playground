@@ -1,0 +1,69 @@
+REPOSITORY := "yewstack"
+IMAGE_PREFIX := REPOSITORY + "/playground_"
+BASE_IMAGE := IMAGE_PREFIX + "base"
+
+# Build all docker images.
+build:
+    #!/usr/bin/env sh
+    for channel in {"stable","nightly"}; do
+        just build-compiler "${channel}"
+    done
+
+    for tool in {"cargo-expand","clippy","rustfmt"}; do
+        just "build-${tool}"
+    done
+
+# Build the compiler image for the given channel.
+# The image will be tagged `compiler-{channel}`.
+build-compiler channel:
+    @just prepare-base "{{channel}}"
+
+    docker build --tag "compiler-{{channel}}" \
+        --build-arg channel="{{channel}}" \
+        "compiler"
+
+# Build the cargo-expand image.
+# The image will be tagged `cargo-expand`.
+build-cargo-expand:
+    @just _build-tool cargo-expand
+
+# Build the clippy image.
+# The image will be tagged `clippy`.
+build-clippy:
+    @just _build-tool clippy
+
+# Build the rustfmt image.
+# The image will be tagged `rustfmt`.
+build-rustfmt:
+    @just _build-tool rustfmt
+
+_build-tool tool channel="nightly":
+    @just prepare-base "{{channel}}"
+
+    docker build --tag "{{tool}}" \
+        --build-arg channel="{{channel}}" \
+        "{{tool}}"
+
+prepare-base channel:
+    #!/usr/bin/env sh
+    just _assert_docker_installed
+    if [[ "$(docker images -q {{BASE_IMAGE}}:{{channel}} 2> /dev/null)" == "" ]]; then
+        echo -e "building base image for {{channel}}"
+        just _build-base "{{channel}}"
+    fi
+
+_build-base channel:
+    docker build --tag "{{BASE_IMAGE}}:{{channel}}" \
+        --cache-from "{{BASE_IMAGE}}:{{channel}}" \
+        --cache-from "{{BASE_IMAGE}}" \
+        --build-arg channel="{{channel}}" \
+        base
+
+_assert_docker_installed:
+    #!/usr/bin/env sh
+    if ! [ -x "$(command -v docker)" ]; then
+        echo -e ""
+        echo -e "ERROR: `docker` command isn't available"
+        echo -e "HINT: Visit https://www.docker.com/get-started for instructions."
+        exit 1
+    fi
