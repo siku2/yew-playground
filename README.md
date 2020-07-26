@@ -1,4 +1,8 @@
+<div align="center">
+
 # Yew Playground
+
+</div>
 
 ## Getting started
 
