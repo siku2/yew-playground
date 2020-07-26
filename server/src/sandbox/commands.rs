@@ -82,7 +82,7 @@ pub struct CrateInformation {
 
 pub fn list_crates() -> Result<Vec<CrateInformation>> {
     let mut command = docker_run();
-    command.args(&[Channel::Stable.container_name()]);
+    command.args(&[Channel::Stable.compiler_container_name()]);
     command.args(&["cat", "crate-information.json"]);
     let output = run_with_timeout(command)?;
 
@@ -103,7 +103,7 @@ pub struct Version {
 
 pub fn rustc_version(channel: Channel) -> Result<Version> {
     let mut command = docker_run();
-    command.args(&[channel.container_name()]);
+    command.args(&[channel.compiler_container_name()]);
     command.args(&["rustc", "--version", "--verbose"]);
 
     let output = run_with_timeout(command)?;

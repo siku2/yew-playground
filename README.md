@@ -24,3 +24,8 @@ You can run `just --list` to list all possible commands.
 You can also use `just help` for a bit of help.
 
 The most important ones are `just watch-server` and `just watch-frontend`.
+
+## Reverse proxy
+
+<!-- TODO -->
+Requires a reverse proxy to forward `$1.<HOST>/$2` to `<HOST>/sandbox/$1/$2`.

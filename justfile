@@ -34,6 +34,7 @@ watch-frontend:
 
 run-server:
     @just _info "starting the server"
+    @just server/config/docker/check
     cargo run --package server
 
 watch-server:

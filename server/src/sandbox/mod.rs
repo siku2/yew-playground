@@ -28,17 +28,15 @@ pub mod response;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Channel {
     Stable,
-    Beta,
     Nightly,
 }
 impl Channel {
-    fn container_name(&self) -> &'static str {
+    fn compiler_container_name(&self) -> &'static str {
         use Channel::*;
 
         match *self {
-            Stable => "rust-stable",
-            Beta => "rust-beta",
-            Nightly => "rust-nightly",
+            Stable => "compiler-stable",
+            Nightly => "compiler-nightly",
         }
     }
 }
@@ -190,7 +188,8 @@ impl Sandbox {
 
         let execution_cmd = commands::wasm_pack_build(channel, mode);
 
-        cmd.arg(&channel.container_name()).args(&execution_cmd);
+        cmd.arg(&channel.compiler_container_name())
+            .args(&execution_cmd);
 
         log::debug!("Compilation command is {:?}", cmd);
 
@@ -225,7 +224,7 @@ impl Sandbox {
         let mut cmd = self.docker_command();
         cmd.apply_edition(req);
 
-        cmd.arg(&Channel::Nightly.container_name())
+        cmd.arg(&Channel::Nightly.compiler_container_name())
             .args(&["cargo", "expand"]);
 
         log::debug!("Macro expansion command is {:?}", cmd);

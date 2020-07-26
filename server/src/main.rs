@@ -3,8 +3,8 @@
 use error::{Error, Result};
 use rocket::http::RawStr;
 use rocket_contrib::json::Json;
-use sandbox::{request, Channel, Edition, Mode, Sandbox};
-use serde::Deserialize;
+use sandbox::{request, response, Channel, Edition, Mode, Sandbox};
+use serde::{Deserialize, Serialize};
 use std::{convert::TryInto, path::PathBuf};
 
 mod error;
@@ -35,19 +35,37 @@ impl TryInto<request::CompileRequest> for CompileRequest {
         })
     }
 }
+#[derive(Debug, Clone, Serialize)]
+struct CompileResponse {
+    success: bool,
+    code: String,
+    stdout: String,
+    stderr: String,
+}
+impl From<response::CompileResponse> for CompileResponse {
+    fn from(res: response::CompileResponse) -> Self {
+        Self {
+            success: res.success,
+            code: res.code,
+            stdout: res.stdout,
+            stderr: res.stderr,
+        }
+    }
+}
 
 #[rocket::post("/compile", format = "json", data = "<req>")]
-fn compile(req: Json<CompileRequest>) -> Result<String> {
+fn compile(req: Json<CompileRequest>) -> Result<Json<CompileResponse>> {
     let sandbox = Sandbox::create().map_err(Error::SandboxCreation)?;
     sandbox
         .compile(&req.into_inner().try_into()?)
-        .map_err(Error::Compilation)?;
-    Ok(format!("ok"))
+        .map_err(Error::Compilation)
+        .map(CompileResponse::from)
+        .map(Json)
 }
 
 #[rocket::get("/sandbox/<sandbox>/<path..>")]
 fn get_sandbox_file(sandbox: &RawStr, path: PathBuf) -> Result<String> {
-    Ok("hello".to_owned())
+    todo!("get ")
 }
 
 fn main() {
@@ -59,7 +77,6 @@ fn main() {
 fn parse_channel(s: &str) -> Result<Channel> {
     Ok(match s {
         "stable" => Channel::Stable,
-        "beta" => Channel::Beta,
         "nightly" => Channel::Nightly,
         value => return Err(Error::InvalidChannel(value.to_owned())),
     })

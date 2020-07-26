@@ -2,6 +2,13 @@ REPOSITORY := "yewstack"
 IMAGE_PREFIX := REPOSITORY + "/playground_"
 BASE_IMAGE := IMAGE_PREFIX + "base"
 
+# Check whether all required images exist
+@check:
+    just _assert_docker_installed
+    just _assert_image_exists "compiler-stable" "compiler-nightly"
+    just _assert_image_exists "cargo-expand" "clippy" "rustfmt"
+    echo "all images present"
+
 # Build all docker images.
 build:
     #!/usr/bin/env sh
@@ -61,9 +68,17 @@ _build-base channel:
 
 _assert_docker_installed:
     #!/usr/bin/env sh
-    if ! [ -x "$(command -v docker)" ]; then
-        echo -e ""
-        echo -e "ERROR: `docker` command isn't available"
-        echo -e "HINT: Visit https://www.docker.com/get-started for instructions."
+    if ! [[ -x "$(command -v docker)" ]]; then
+        echo "ERROR: `docker` command isn't available"
+        echo "HINT: Visit https://www.docker.com/get-started for instructions."
         exit 1
     fi
+
+_assert_image_exists +tags:
+    #!/usr/bin/env sh
+    for tag in {{tags}}; do
+        if [[ "$(docker images -q ${tag} 2> /dev/null)" == "" ]]; then
+            echo "ERROR: image `${tag}` is missing"
+            exit 1
+        fi
+    done
