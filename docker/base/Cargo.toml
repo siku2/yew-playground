@@ -17,6 +17,8 @@ codegen-units = 1
 incremental = false
 
 [dependencies]
-wasm-bindgen = "0.2.65"
-yew = "0.17.2"
-yew-router = "0.14.0"
+js-sys = "0.3"
+wasm-bindgen = "0.2"
+web-sys = "0.3"
+yew = "0.17"
+yew-router = "0.14"
