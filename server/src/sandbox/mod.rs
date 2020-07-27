@@ -18,7 +18,7 @@ use std::{
     fmt::Write,
     fs::{self, Permissions},
     os::unix::fs::PermissionsExt,
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::Command,
 };
 use tempdir::TempDir;
@@ -27,6 +27,7 @@ mod commands;
 mod error;
 mod helpers;
 
+#[derive(Debug)]
 pub struct Sandbox {
     _scratch: TempDir,
     input_file: PathBuf,
@@ -47,6 +48,15 @@ impl Sandbox {
             input_file,
             output_dir,
         })
+    }
+
+    pub fn get_file_path(&self, file: &Path) -> Option<PathBuf> {
+        let path = self.output_dir.join(file);
+        if path.is_file() {
+            Some(path)
+        } else {
+            None
+        }
     }
 
     pub fn compile(&self, req: &CompileRequest) -> Result<CompileResponse> {

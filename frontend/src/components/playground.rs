@@ -1,4 +1,4 @@
-use super::Editor;
+use super::editor::Editor;
 use crate::services::{
     api::{self, Channel, CompileRequest, CompileResponse, Mode},
     locale,

@@ -1,7 +1,4 @@
-mod editor;
-mod playground;
-mod root;
-
-pub use editor::Editor;
-pub use playground::Playground;
-pub use root::BootComponent;
+pub mod editor;
+pub mod explorer;
+pub mod playground;
+pub mod root;

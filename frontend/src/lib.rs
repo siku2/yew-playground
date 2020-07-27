@@ -9,5 +9,5 @@ pub fn run_app() {
     #[cfg(feature = "console_log")]
     console_log::init().expect("failed to initialize logging");
 
-    yew::start_app::<components::BootComponent>();
+    yew::start_app::<components::root::BootComponent>();
 }

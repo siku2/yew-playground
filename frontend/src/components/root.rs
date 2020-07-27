@@ -1,4 +1,4 @@
-use super::Playground;
+use super::playground::Playground;
 use crate::services::locale::{self, LoadBundleTask};
 use yew::{html, Component, ComponentLink, Html, ShouldRender};
 
