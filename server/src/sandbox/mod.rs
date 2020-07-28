@@ -27,31 +27,38 @@ mod commands;
 mod error;
 mod helpers;
 
+const PUBLIC_DIR_NAME: &str = "public";
+const SRC_DIR_NAME: &str = "src";
+const WWW_DIR_NAME: &str = "www";
+
 #[derive(Debug)]
 pub struct Sandbox {
     _scratch: TempDir,
-    input_file: PathBuf,
-    output_dir: PathBuf,
+    public_dir: PathBuf,
+    src_dir: PathBuf,
+    www_dir: PathBuf,
 }
 impl Sandbox {
     pub fn create() -> Result<Self> {
         let scratch = TempDir::new("playground").map_err(Error::UnableToCreateTempDir)?;
-        let input_file = scratch.path().join("input.rs");
-        let output_dir = scratch.path().join("output");
+        let public_dir = scratch.path().join(PUBLIC_DIR_NAME);
+        let src_dir = scratch.path().join(SRC_DIR_NAME);
+        let www_dir = scratch.path().join(WWW_DIR_NAME);
 
-        fs::create_dir(&output_dir).map_err(Error::UnableToCreateOutputDir)?;
-        fs::set_permissions(&output_dir, open_permissions())
+        fs::create_dir(&www_dir).map_err(Error::UnableToCreateOutputDir)?;
+        fs::set_permissions(&www_dir, open_permissions())
             .map_err(Error::UnableToSetOutputPermissions)?;
 
         Ok(Self {
             _scratch: scratch,
-            input_file,
-            output_dir,
+            public_dir,
+            src_dir,
+            www_dir,
         })
     }
 
     pub fn get_file_path(&self, file: &Path) -> Option<PathBuf> {
-        let path = self.output_dir.join(file);
+        let path = self.www_dir.join(file);
         if path.is_file() {
             Some(path)
         } else {
@@ -68,7 +75,7 @@ impl Sandbox {
         // The compiler writes the file to a name like
         // `compilation-3b75174cac3d47fb.ll`, so we just find the
         // first with the right extension.
-        let file = fs::read_dir(&self.output_dir)
+        let file = fs::read_dir(&self.www_dir)
             .map_err(Error::UnableToReadOutput)?
             .flat_map(|entry| entry)
             .map(|entry| entry.path())
@@ -106,7 +113,7 @@ impl Sandbox {
 
         Ok(FormatResponse {
             success: output.status.success(),
-            code: helpers::read_file_to_string(self.input_file.as_ref())?
+            code: helpers::read_file_to_string(self.src_dir.as_ref())?
                 .ok_or(Error::OutputMissing)?,
             stdout: helpers::string_from_utf8_vec(output.stdout)?,
             stderr: helpers::string_from_utf8_vec(output.stderr)?,
@@ -140,14 +147,14 @@ impl Sandbox {
     }
 
     fn write_source_code(&self, code: &str) -> Result<()> {
-        fs::write(&self.input_file, code).map_err(Error::UnableToCreateSourceFile)?;
-        fs::set_permissions(&self.input_file, open_permissions())
+        fs::write(&self.src_dir, code).map_err(Error::UnableToCreateSourceFile)?;
+        fs::set_permissions(&self.src_dir, open_permissions())
             .map_err(Error::UnableToSetSourcePermissions)?;
 
         log::debug!(
             "Wrote {} bytes of source to {}",
             code.len(),
-            self.input_file.display()
+            self.src_dir.display()
         );
         Ok(())
     }
@@ -208,11 +215,11 @@ impl Sandbox {
     }
 
     fn docker_command(&self) -> Command {
-        let mut mount_input_file = self.input_file.as_os_str().to_os_string();
+        let mut mount_input_file = self.src_dir.as_os_str().to_os_string();
         mount_input_file.push(":");
-        mount_input_file.push("/playground/src/lib.rs");
+        mount_input_file.push("/playground/src");
 
-        let mut mount_output_dir = self.output_dir.as_os_str().to_os_string();
+        let mut mount_output_dir = self.www_dir.as_os_str().to_os_string();
         mount_output_dir.push(":");
         mount_output_dir.push("/playground-result");
 

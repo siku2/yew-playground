@@ -81,4 +81,4 @@ There are a lot more than the ones listed above.
 
 <!-- TODO -->
 
-A reverse proxy to forward `$1.<HOST>/$2` to `<HOST>/sandbox/$1/$2` is required.
+A reverse proxy to forward `$1.<HOST>/$2` to `<HOST>/proxy/$1/$2` is required.
