@@ -1,5 +1,24 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct File {
+    pub path: String,
+    pub name: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct Directory {
+    pub path: String,
+    pub directories: Vec<Directory>,
+    pub files: Vec<File>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct SandboxStructure {
+    pub public: Directory,
+    pub src: Directory,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub enum Channel {
     Stable,

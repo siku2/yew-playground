@@ -1,7 +1,7 @@
 #![feature(decl_macro, hash_set_entry, never_type, proc_macro_hygiene)]
 
 use janitor::{Janitor, SessionRef};
-use protocol::{CompileRequest, CompileResponse, SessionDetails};
+use protocol::{CompileRequest, CompileResponse, SandboxStructure, SessionDetails};
 use response::Content;
 use rocket::{
     http::{ContentType, Status},
@@ -64,9 +64,13 @@ fn get_session(janitor: &Janitor, id: &UuidParam) -> Result<SessionRef> {
 }
 
 #[rocket::get("/files/<sandbox>")]
-fn api_sandbox_list_files(janitor: State<Janitor>, sandbox: UuidParam) -> Result<Json<()>> {
+fn api_sandbox_list_files(
+    janitor: State<Janitor>,
+    sandbox: UuidParam,
+) -> Result<Json<SandboxStructure>> {
     let session = get_session(&janitor, &sandbox)?;
-    todo!()
+    let structure = session.sandbox.get_structure()?;
+    Ok(Json(structure))
 }
 
 #[rocket::get("/files/<sandbox>/src/<path..>")]

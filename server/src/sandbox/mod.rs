@@ -12,8 +12,11 @@ use protocol::{
     MacroExpansionRequest,
     MacroExpansionResponse,
     Mode,
+    SandboxStructure,
 };
 use std::{
+    borrow::Cow,
+    collections::VecDeque,
     fs::{self, Permissions},
     io,
     os::unix::fs::PermissionsExt,
@@ -43,17 +46,18 @@ pub struct Sandbox {
     www_dir: PathBuf,
 }
 impl Sandbox {
+    /// Creates a Sandbox with only the directory structure.
     fn create_empty() -> Result<Self> {
-        let scratch = TempDir::new("playground").map_err(Error::UnableToCreateTempDir)?;
+        let scratch = TempDir::new("playground").map_err(Error::UnableToPrepareDir)?;
 
         let public_dir = scratch.path().join(PUBLIC_DIR_NAME);
-        fs::create_dir(&public_dir).map_err(Error::UnableToCreateTempDir)?;
+        fs::create_dir(&public_dir).map_err(Error::UnableToPrepareDir)?;
 
         let src_dir = scratch.path().join(SRC_DIR_NAME);
-        fs::create_dir(&src_dir).map_err(Error::UnableToCreateTempDir)?;
+        fs::create_dir(&src_dir).map_err(Error::UnableToPrepareDir)?;
 
         let build_dir = scratch.path().join(BUILD_DIR_NAME);
-        fs::create_dir(&build_dir).map_err(Error::UnableToCreateTempDir)?;
+        fs::create_dir(&build_dir).map_err(Error::UnableToPrepareDir)?;
         set_permissions_open(&build_dir)?;
 
         let www_dir = scratch.path().join("www");
@@ -71,15 +75,23 @@ impl Sandbox {
         let sandbox = Self::create_empty()?;
 
         copy_dir(&template_path.join(PUBLIC_DIR_NAME), &sandbox.public_dir)
-            .map_err(Error::UnableToCreateTempDir)?;
+            .map_err(Error::UnableToPrepareDir)?;
         copy_dir(&template_path.join(SRC_DIR_NAME), &sandbox.src_dir)
-            .map_err(Error::UnableToCreateTempDir)?;
+            .map_err(Error::UnableToPrepareDir)?;
 
         Ok(sandbox)
     }
 
+    pub fn get_structure(&self) -> Result<SandboxStructure> {
+        let base = self._scratch.path();
+        Ok(SandboxStructure {
+            public: create_protocol_directory(base, &self.public_dir)?,
+            src: create_protocol_directory(base, &self.src_dir)?,
+        })
+    }
+
     pub fn write_src_file(&self, path: &Path, code: &str) -> Result<()> {
-        let path = self.src_dir.join(path);
+        let path = prepare_path(&self.src_dir, path)?;
         fs::write(&path, code).map_err(Error::UnableToWriteFile)?;
 
         log::debug!("wrote {} bytes of source to {}", code.len(), path.display());
@@ -87,21 +99,11 @@ impl Sandbox {
     }
 
     pub fn get_src_path(&self, path: &Path) -> Option<PathBuf> {
-        let path = self.src_dir.join(path);
-        if path.is_file() {
-            Some(path)
-        } else {
-            None
-        }
+        prepare_existing_file_path(&self.src_dir, path)
     }
 
     pub fn get_www_path(&self, path: &Path) -> Option<PathBuf> {
-        let path = self.www_dir.join(path);
-        if path.is_file() {
-            Some(path)
-        } else {
-            None
-        }
+        prepare_existing_file_path(&self.www_dir, path)
     }
 
     pub fn compile(&self, req: &CompileRequest) -> Result<CompileResponse> {
@@ -224,6 +226,7 @@ impl Sandbox {
         cmd
     }
 }
+
 // We must create a world-writable files (rustfmt) and directories so that the
 // process inside the Docker container can write into it.
 //
@@ -237,36 +240,86 @@ fn set_permissions_open(path: &Path) -> Result<()> {
     fs::set_permissions(path, open_permissions()).map_err(Error::UnableToSetPermissions)
 }
 
-fn hard_link_dir(src: &Path, dst: &Path) -> io::Result<()> {
-    src_dst_transformer(src, dst, &|src, dst| fs::hard_link(src, dst))
-}
-
 fn copy_dir(src: &Path, dst: &Path) -> io::Result<()> {
-    src_dst_transformer(src, dst, &|src, dst| {
-        fs::copy(src, dst)?;
-        Ok(())
-    })
-}
+    let mut queue: VecDeque<(Cow<Path>, Cow<Path>)> = VecDeque::new();
+    queue.push_back((Cow::from(src), Cow::from(dst)));
 
-// TODO clean this up
-fn src_dst_transformer(
-    src: &Path,
-    dst: &Path,
-    f: &impl Fn(&Path, &Path) -> io::Result<()>,
-) -> io::Result<()> {
-    for entry in src.read_dir()? {
-        let entry = entry?;
+    while let Some((src, dst)) = queue.pop_front() {
+        for entry in src.read_dir()? {
+            let entry = entry?;
+            let entry_type = entry.file_type()?;
+            let dst_path = dst.join(entry.file_name());
 
-        let entry_type = entry.file_type()?;
-        let dst_path = dst.join(entry.file_name());
-
-        if entry_type.is_file() {
-            f(&entry.path(), &dst_path)?;
-        } else if entry_type.is_dir() {
-            fs::create_dir(&dst_path)?;
-            src_dst_transformer(&entry.path(), &dst_path, f)?;
+            if entry_type.is_file() {
+                fs::copy(&entry.path(), &dst_path)?;
+            } else if entry_type.is_dir() {
+                fs::create_dir(&dst_path)?;
+                queue.push_back((Cow::from(entry.path()), Cow::from(dst_path)));
+            }
         }
     }
 
     Ok(())
+}
+
+fn prepare_path(base: &Path, rel: &Path) -> Result<PathBuf> {
+    let path = base
+        .join(rel)
+        .canonicalize()
+        .map_err(|_| Error::InvalidPath(rel.to_path_buf()))?;
+
+    if path.starts_with(&base) {
+        Ok(path)
+    } else {
+        Err(Error::InvalidPath(rel.to_path_buf()))
+    }
+}
+
+fn prepare_existing_file_path(base: &Path, rel: &Path) -> Option<PathBuf> {
+    prepare_path(base, rel).ok().filter(|path| path.is_file())
+}
+
+fn path_to_string(path: &Path) -> Result<String> {
+    path.to_str()
+        .ok_or_else(|| Error::InvalidPath(path.to_path_buf()))
+        .map(String::from)
+}
+
+fn rel_path_to_string(base: &Path, rel: &Path) -> Result<String> {
+    let path = rel
+        .strip_prefix(base)
+        .map_err(|_| Error::CorruptSandboxDir)?;
+    path_to_string(path)
+}
+
+fn _create_protocol_directory(base: &Path, path: &Path) -> Result<protocol::Directory> {
+    let mut directories = Vec::new();
+    let mut files = Vec::new();
+
+    for entry in path.read_dir().map_err(|_| Error::CorruptSandboxDir)? {
+        let entry = entry.map_err(|_| Error::CorruptSandboxDir)?;
+        let entry_type = entry.file_type().map_err(|_| Error::CorruptSandboxDir)?;
+
+        if entry_type.is_file() {
+            files.push(protocol::File {
+                path: rel_path_to_string(base, &entry.path())?,
+                name: entry
+                    .file_name()
+                    .into_string()
+                    .map_err(|_| Error::CorruptSandboxDir)?,
+            });
+        } else if entry_type.is_dir() {
+            directories.push(_create_protocol_directory(base, &entry.path())?);
+        }
+    }
+
+    Ok(protocol::Directory {
+        path: rel_path_to_string(base, path)?,
+        directories,
+        files,
+    })
+}
+
+fn create_protocol_directory(base: &Path, rel: &Path) -> Result<protocol::Directory> {
+    _create_protocol_directory(base, rel)
 }

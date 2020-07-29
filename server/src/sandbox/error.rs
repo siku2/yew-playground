@@ -1,17 +1,22 @@
-use std::{io, string::FromUtf8Error, time::Duration};
+use std::{io, path::PathBuf, string::FromUtf8Error, time::Duration};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("unable to create temporary directory: {0}")]
-    UnableToCreateTempDir(#[source] io::Error),
+    UnableToPrepareDir(#[source] io::Error),
     #[error("unable to set permissions: {0}")]
     UnableToSetPermissions(#[source] io::Error),
     #[error("unable to read file: {0}")]
     UnableToReadFile(#[source] io::Error),
     #[error("unable to write file: {0}")]
     UnableToWriteFile(#[source] io::Error),
+
+    #[error("path is invalid: {0}")]
+    InvalidPath(PathBuf),
+    #[error("sandbox directory is corrupted")]
+    CorruptSandboxDir,
 
     #[error("unable to execute the compiler: {0}")]
     UnableToExecuteCompiler(#[source] io::Error),

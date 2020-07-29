@@ -7,6 +7,7 @@ use protocol::{
     FormatRequest,
     MacroExpansionRequest,
 };
+
 pub fn string_from_utf8_vec(v: Vec<u8>) -> Result<String> {
     String::from_utf8(v).map_err(Error::OutputNotUtf8)
 }
