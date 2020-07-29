@@ -16,7 +16,7 @@ log = "0.4"
 protocol = { path = "../protocol" }
 thiserror = "1.0"
 unic-langid = "0.9"
-wasm-bindgen = "0.2"
+wasm-bindgen = "=0.2.65"
 yew = "0.17"
 
 [features]

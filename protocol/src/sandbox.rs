@@ -24,20 +24,17 @@ pub struct CompileRequest {
     #[serde(default)]
     pub edition: Option<Edition>,
     pub backtrace: bool,
-    pub code: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct CompileResponse {
     pub success: bool,
-    pub code: String,
     pub stdout: String,
     pub stderr: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct FormatRequest {
-    pub code: String,
     #[serde(default)]
     pub edition: Option<Edition>,
 }
@@ -45,14 +42,12 @@ pub struct FormatRequest {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct FormatResponse {
     pub success: bool,
-    pub code: String,
     pub stdout: String,
     pub stderr: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ClippyRequest {
-    pub code: String,
     #[serde(default)]
     pub edition: Option<Edition>,
 }
@@ -64,16 +59,15 @@ pub struct ClippyResponse {
     pub stderr: String,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct MacroExpansionRequest {
+    #[serde(default)]
+    pub edition: Option<Edition>,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct MacroExpansionResponse {
     pub success: bool,
     pub stdout: String,
     pub stderr: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct MacroExpansionRequest {
-    pub code: String,
-    #[serde(default)]
-    pub edition: Option<Edition>,
 }

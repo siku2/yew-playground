@@ -10,9 +10,7 @@ pub fn compile_with_request(
     callback: Callback<anyhow::Result<CompileResponse>>,
 ) -> anyhow::Result<FetchTask> {
     // TODO configurable api endpoint
-    let req = Request::post("/api/compile")
-        .body(Json(request))
-        .unwrap();
+    let req = Request::post("/api/compile").body(Json(request)).unwrap();
     FetchService::fetch(
         req,
         Callback::from(

@@ -7,27 +7,8 @@ use protocol::{
     FormatRequest,
     MacroExpansionRequest,
 };
-use std::{
-    fs::File,
-    io::{BufReader, ErrorKind, Read},
-    path::Path,
-};
-
 pub fn string_from_utf8_vec(v: Vec<u8>) -> Result<String> {
     String::from_utf8(v).map_err(Error::OutputNotUtf8)
-}
-
-pub fn read_file_to_string(path: &Path) -> Result<Option<String>> {
-    let f = match File::open(path) {
-        Ok(f) => f,
-        Err(ref e) if e.kind() == ErrorKind::NotFound => return Ok(None),
-        Err(e) => return Err(Error::UnableToReadOutput(e)),
-    };
-    let mut f = BufReader::new(f);
-    let mut s = String::new();
-    f.read_to_string(&mut s)
-        .map_err(Error::UnableToReadOutput)?;
-    Ok(Some(s))
 }
 
 pub fn container_name_for_channel(channel: Channel) -> &'static str {

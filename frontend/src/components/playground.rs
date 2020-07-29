@@ -37,7 +37,6 @@ impl Component for Playground {
                         mode: Mode::Debug,
                         edition: None,
                         backtrace: false,
-                        code: String::from("hello world!"),
                     },
                     self.link.callback(OnCompileResponse),
                 );
