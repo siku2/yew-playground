@@ -1,5 +1,7 @@
-use super::playground::Playground;
-use crate::services::locale::{self, LoadBundleTask};
+use crate::{
+    routes::AppRouter,
+    services::locale::{self, LoadBundleTask},
+};
 use yew::{html, Component, ComponentLink, Html, ShouldRender};
 
 pub struct Root;
@@ -12,7 +14,7 @@ impl Component for Root {
     }
 
     fn update(&mut self, _msg: Self::Message) -> ShouldRender {
-        true
+        false
     }
 
     fn change(&mut self, _props: Self::Properties) -> ShouldRender {
@@ -20,18 +22,8 @@ impl Component for Root {
     }
 
     fn view(&self) -> Html {
-        let lang = locale::loaded_language()
-            .map_or_else(|| "unknown".to_string(), |lang_id| lang_id.to_string());
         html! {
-            <>
-                <header>
-                    <h1>{ locale::get("title", None) }</h1>
-                </header>
-
-                { lang }
-
-                <Playground />
-            </>
+            <AppRouter />
         }
     }
 }

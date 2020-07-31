@@ -31,16 +31,16 @@ impl Component for Playground {
 
         match msg {
             RunCode => {
-                let task = api::compile_with_request(
-                    &CompileRequest {
-                        channel: Channel::Stable,
-                        mode: Mode::Debug,
-                        edition: None,
-                        backtrace: false,
-                    },
-                    self.link.callback(OnCompileResponse),
-                );
-                self.fetch_task = task.ok();
+                // let task = api::compile_with_request(
+                //     &CompileRequest {
+                //         channel: Channel::Stable,
+                //         mode: Mode::Debug,
+                //         edition: None,
+                //         backtrace: false,
+                //     },
+                //     self.link.callback(OnCompileResponse),
+                // );
+                // self.fetch_task = task.ok();
                 false
             }
             OnCompileResponse(res) => {

@@ -1,4 +1,6 @@
-use yew::{html, Component, ComponentLink, Properties, ShouldRender};
+use crate::utils::NeqAssign;
+use std::rc::Rc;
+use yew::{html, Component, ComponentLink, Html, Properties, ShouldRender};
 
 #[derive(Clone, Debug, PartialEq, Properties)]
 pub struct ExplorerProps {}
@@ -20,7 +22,7 @@ impl Component for Explorer {
         false
     }
 
-    fn view(&self) -> yew::Html {
+    fn view(&self) -> Html {
         html! {
             <textarea />
         }
@@ -28,26 +30,36 @@ impl Component for Explorer {
 }
 
 #[derive(Clone, Debug, PartialEq, Properties)]
-pub struct FileProps {}
+pub struct FileProps {
+    file: Rc<protocol::File>,
+}
 
-pub struct File {}
+pub struct File {
+    props: FileProps,
+}
 impl Component for File {
     type Message = ();
     type Properties = FileProps;
 
-    fn create(_props: Self::Properties, _link: ComponentLink<Self>) -> Self {
-        Self {}
+    fn create(props: Self::Properties, _link: ComponentLink<Self>) -> Self {
+        Self { props }
     }
 
     fn update(&mut self, _msg: Self::Message) -> ShouldRender {
         false
     }
 
-    fn change(&mut self, _props: Self::Properties) -> ShouldRender {
-        false
+    fn change(&mut self, props: Self::Properties) -> ShouldRender {
+        self.props.neq_assign(props)
     }
 
-    fn view(&self) -> yew::Html {
-        html! {}
+    fn view(&self) -> Html {
+        let file = &self.props.file;
+
+        html! {
+            <div class="explorer__file">
+                { &file.name }
+            </div>
+        }
     }
 }
