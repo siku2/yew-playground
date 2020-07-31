@@ -9,12 +9,14 @@ use rocket::{
     Response,
     State,
 };
-use rocket_contrib::{json::Json, serve::StaticFiles, uuid::Uuid as UuidParam};
+use rocket_contrib::{json::Json, uuid::Uuid as UuidParam};
 use sandbox::Sandbox;
+use serve::SPAStaticFiles;
 use std::path::{Path, PathBuf};
 
 mod janitor;
 mod sandbox;
+mod serve;
 
 #[derive(Debug)]
 struct Error(Status, protocol::Error);
@@ -140,6 +142,6 @@ fn main() {
         )
         .mount("/proxy", rocket::routes![sandbox_get_file])
         // TODO make static location configurable
-        .mount("/", StaticFiles::from("www"))
+        .mount("/", SPAStaticFiles::new("www"))
         .launch();
 }
