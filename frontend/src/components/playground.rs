@@ -1,14 +1,10 @@
 use super::editor::Editor;
-use crate::services::{
-    api::{self, Channel, CompileRequest, CompileResponse, Mode},
-    locale,
-};
+use crate::services::locale;
 use yew::{html, services::fetch::FetchTask, Component, ComponentLink, Html, ShouldRender};
 
 #[derive(Debug)]
 pub enum PlaygroundMessage {
     RunCode,
-    OnCompileResponse(anyhow::Result<CompileResponse>),
 }
 
 pub struct Playground {
@@ -29,26 +25,7 @@ impl Component for Playground {
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         use PlaygroundMessage::*;
 
-        match msg {
-            RunCode => {
-                // let task = api::compile_with_request(
-                //     &CompileRequest {
-                //         channel: Channel::Stable,
-                //         mode: Mode::Debug,
-                //         edition: None,
-                //         backtrace: false,
-                //     },
-                //     self.link.callback(OnCompileResponse),
-                // );
-                // self.fetch_task = task.ok();
-                false
-            }
-            OnCompileResponse(res) => {
-                self.fetch_task = None;
-                log::info!("{:?}", res);
-                true
-            }
-        }
+        false
     }
 
     fn change(&mut self, _props: Self::Properties) -> ShouldRender {

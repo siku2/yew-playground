@@ -9,6 +9,7 @@ pub struct File {
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct Directory {
     pub path: String,
+    pub name: String,
     pub directories: Vec<Directory>,
     pub files: Vec<File>,
 }

@@ -315,6 +315,11 @@ fn _create_protocol_directory(base: &Path, path: &Path) -> Result<protocol::Dire
 
     Ok(protocol::Directory {
         path: rel_path_to_string(base, path)?,
+        name: path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .ok_or(Error::CorruptSandboxDir)?
+            .to_owned(),
         directories,
         files,
     })

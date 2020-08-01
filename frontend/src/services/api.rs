@@ -1,12 +1,21 @@
-pub use protocol::{Channel, CompileRequest, CompileResponse, Edition, Mode, SessionDetails};
-use serde::Serialize;
+pub use protocol::{
+    Channel,
+    CompileRequest,
+    CompileResponse,
+    Edition,
+    Mode,
+    SandboxStructure,
+    SessionDetails,
+};
+use serde::{Deserialize, Serialize};
+use std::{fmt::Display, rc::Rc};
 use yew::{
     format::{Json, Nothing, Text},
     services::fetch::{FetchService, FetchTask, Request, Response},
     Callback,
 };
 
-fn make_api_uri(path: &'static str) -> String {
+fn make_api_uri<T: Display>(path: T) -> String {
     // TODO configurable api endpoint
     format!("/api{}", path)
 }
@@ -21,11 +30,31 @@ pub fn create_session(callback: Callback<anyhow::Result<Session>>) -> anyhow::Re
     )
 }
 
+pub type SessionRef = Rc<Session>;
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Session {
-    pub details: SessionDetails,
+    pub id: String,
+    pub details: Option<SessionDetails>,
 }
 impl Session {
+    pub fn new(id: String) -> Self {
+        Self { id, details: None }
+    }
+
+    pub fn get_structure(
+        &self,
+        callback: Callback<anyhow::Result<SandboxStructure>>,
+    ) -> anyhow::Result<FetchTask> {
+        let req = Request::get(make_api_uri(format!("/files/{}", self.id)))
+            .body(Nothing)
+            .unwrap();
+
+        perform_json_request(req, callback)
+    }
+
     pub fn compile(
+        &self,
         callback: Callback<anyhow::Result<CompileResponse>>,
     ) -> anyhow::Result<FetchTask> {
         let body = CompileRequest {
@@ -41,8 +70,28 @@ impl Session {
 
 impl From<SessionDetails> for Session {
     fn from(details: SessionDetails) -> Self {
-        Self { details }
+        Self {
+            id: details.id.clone(),
+            details: Some(details),
+        }
     }
+}
+
+fn perform_json_request<ReqBody, RespBody>(
+    req: Request<ReqBody>,
+    callback: Callback<anyhow::Result<RespBody>>,
+) -> anyhow::Result<FetchTask>
+where
+    ReqBody: Into<Text>,
+    RespBody: 'static + for<'de> Deserialize<'de>,
+{
+    FetchService::fetch(
+        req,
+        Callback::from(move |response: Response<Json<anyhow::Result<RespBody>>>| {
+            let body = response.into_body().0;
+            callback.emit(body)
+        }),
+    )
 }
 
 fn post_json<Resp>(
@@ -54,12 +103,5 @@ where
     Resp: 'static + for<'de> serde::Deserialize<'de>,
 {
     let req = Request::post(make_api_uri(path)).body(Json(body)).unwrap();
-
-    FetchService::fetch(
-        req,
-        Callback::from(move |response: Response<Json<anyhow::Result<Resp>>>| {
-            let body = response.into_body().0;
-            callback.emit(body)
-        }),
-    )
+    perform_json_request(req, callback)
 }

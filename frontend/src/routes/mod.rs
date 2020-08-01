@@ -1,3 +1,5 @@
+use home::HomePage;
+use sandbox::SandboxPage;
 use yew::{html, Component, ComponentLink, Html, ShouldRender};
 use yew_router::{router::Router, Switch};
 
@@ -16,7 +18,12 @@ pub enum AppSwitch {
 pub struct AppRouter;
 impl AppRouter {
     fn render_route(switch: AppSwitch) -> Html {
-        html! {}
+        use AppSwitch::*;
+
+        match switch {
+            Home => html! { <HomePage /> },
+            Sandbox(id) => html! { <SandboxPage id=id /> },
+        }
     }
 }
 impl Component for AppRouter {
