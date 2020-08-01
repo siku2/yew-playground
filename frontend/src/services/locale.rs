@@ -1,16 +1,15 @@
-use fetch::FluentFetchResult;
 use fluent::{FluentArgs, FluentBundle, FluentError, FluentMessage, FluentResource};
+use fluent_syntax::parser::ParserError;
 use std::{
     cell::{BorrowError, RefCell},
     str::FromStr,
 };
 use unic_langid::LanguageIdentifier;
 use yew::{
-    services::fetch::{FetchTask, Response},
+    format::{Nothing, Text},
+    services::fetch::{FetchService, FetchTask, Request, Response},
     Callback,
 };
-
-mod fetch;
 
 thread_local! {
     static BUNDLE: RefCell<Option<FluentBundle<FluentResource>>> = RefCell::new(None);
@@ -46,7 +45,7 @@ pub fn load_bundle(
 ) -> anyhow::Result<LoadBundleTask> {
     let lang_id = LanguageIdentifier::from_str(lang)?;
 
-    let fetch_task = fetch::fetch(
+    let fetch_task = fetch_fluent_resource(
         &lang_id.to_string(),
         Callback::from(move |resp: Response<FluentFetchResult>| {
             let resource_res = resp.into_body().into();
@@ -130,4 +129,43 @@ pub fn get(id: &str, args: Option<&FluentArgs>) -> String {
             id.to_string()
         }
     }
+}
+
+#[derive(Debug)]
+#[must_use]
+enum FluentFetchResult {
+    Ok(FluentResource),
+    FetchError(anyhow::Error),
+    ParseError(Vec<ParserError>),
+}
+impl From<Text> for FluentFetchResult {
+    fn from(value: Text) -> Self {
+        match value {
+            Ok(text) => match FluentResource::try_new(text) {
+                Ok(res) => Self::Ok(res),
+                Err((_, err)) => Self::ParseError(err),
+            },
+            Err(err) => Self::FetchError(err),
+        }
+    }
+}
+impl Into<Result<FluentResource, anyhow::Error>> for FluentFetchResult {
+    fn into(self) -> Result<FluentResource, anyhow::Error> {
+        match self {
+            Self::Ok(v) => Ok(v),
+            Self::FetchError(err) => Err(err),
+            Self::ParseError(err) => Err(anyhow::anyhow!("failed to parse fluent file: {:?}", err)),
+        }
+    }
+}
+
+/// Fetch the `FluentResource` for the given language.
+fn fetch_fluent_resource(
+    lang: &str,
+    callback: Callback<Response<FluentFetchResult>>,
+) -> anyhow::Result<FetchTask> {
+    let req = Request::get(format!("/locale/{}.ftl", lang))
+        .body(Nothing)
+        .unwrap();
+    FetchService::fetch(req, callback)
 }
