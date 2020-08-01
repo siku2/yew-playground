@@ -167,10 +167,12 @@ impl Component for Directory {
         let directory = &self.props.directory;
 
         html! {
-            <div class="explorer__directory">
-                { &directory.name }
-                { for dir_comps }
-                { for file_comps }
+            <div class="explorer-dir">
+                <span class="explorer-item__name">{ &directory.name }</span>
+                <div class="explorer-dir__content">
+                    { for dir_comps }
+                    { for file_comps }
+                </div>
             </div>
         }
     }
@@ -204,8 +206,8 @@ impl Component for File {
         let file = &self.props.file;
 
         html! {
-            <div class="explorer__file">
-                { &file.name }
+            <div class="explorer-file">
+                <span class="explorer-item__name">{ &file.name }</span>
             </div>
         }
     }

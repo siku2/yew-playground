@@ -1,6 +1,6 @@
 use super::editor::Editor;
 use crate::services::locale;
-use yew::{html, services::fetch::FetchTask, Component, ComponentLink, Html, ShouldRender};
+use yew::{html, Component, ComponentLink, Html, ShouldRender};
 
 #[derive(Debug)]
 pub enum PlaygroundMessage {
@@ -9,17 +9,13 @@ pub enum PlaygroundMessage {
 
 pub struct Playground {
     link: ComponentLink<Self>,
-    fetch_task: Option<FetchTask>,
 }
 impl Component for Playground {
     type Message = PlaygroundMessage;
     type Properties = ();
 
     fn create(_props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        Self {
-            link,
-            fetch_task: None,
-        }
+        Self { link }
     }
 
     fn update(&mut self, _msg: Self::Message) -> ShouldRender {

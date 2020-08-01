@@ -1,0 +1,30 @@
+.explorer {
+  overflow-x: hidden;
+  position: relative;
+  width: 10em;
+}
+
+@mixin explorer-item {
+  position: relative;
+  right: 0;
+}
+
+.explorer-dir {
+  @include explorer-item;
+
+  &__content {
+    margin-left: 1em;
+  }
+}
+
+.explorer-file {
+  @include explorer-item;
+}
+
+.explorer-item__name {
+  display: block;
+
+  &:hover {
+    background-color: red;
+  }
+}

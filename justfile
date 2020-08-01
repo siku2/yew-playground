@@ -22,23 +22,48 @@ watch:
 
 # FRONTEND
 
-# Build the frontend.
-build-frontend out_dir="www":
-    @just _info "building frontend"
+_build-frontend-src out_dir:
+    @just _info "compiling frontend"
     wasm-pack build --dev --no-typescript \
         --out-dir "$(pwd)/{{out_dir}}" \
         --out-name app \
         --target web \
         frontend
     @cd "{{out_dir}}" && rm .gitignore package.json
+
+_build-frontend-static out_dir:
     @just _info "adding static files"
     cp -r frontend/static/* "{{out_dir}}"
-    @just _info "DONE"
+
+_build-frontend-style out_dir:
+    @just _info "building stylesheet"
+    sass --load-path="frontend/style" --update \
+        frontend/style/main.scss "{{out_dir}}/style.css"
+
+# Build the frontend.
+@build-frontend out_dir="www":
+    just _assert_sass_installed
+    just _build-frontend-src "{{out_dir}}"
+    just _build-frontend-style "{{out_dir}}"
+    just _build-frontend-static "{{out_dir}}"
+    just _info "DONE"
 
 # Build the frontend and watch for changes.
-watch-frontend:
-    @just _watch "just build-frontend" \
-        "frontend/src" "frontend/static" "frontend/Cargo.toml"
+watch-frontend out_dir="www":
+    #!/usr/bin/env sh
+    just _assert_sass_installed
+
+    just _watch "just _build-frontend-src {{out_dir}}" \
+        "frontend/src" "frontend/Cargo.toml" &
+    just _watch "just _build-frontend-static {{out_dir}}" \
+        "frontend/static" &
+    just _watch "just _build-frontend-style {{out_dir}}" \
+        "frontend/style" &
+    
+    wait
+
+@_assert_sass_installed:
+    just _assert_installed "sass" "Please visit https://sass-lang.com/install for more information"
 
 
 # SERVER
@@ -63,6 +88,12 @@ watch-server:
 
 
 # HELPERS
+
+_assert_installed bin help="":
+    #!/usr/bin/env sh
+    if ! [ -x "$(command -v {{bin}})" ]; then
+        just _error "'{{bin}}' isn't installed (or not in the PATH). {{help}}"
+    fi
 
 _assert_crate_installed crate:
     #!/usr/bin/env sh

@@ -34,6 +34,14 @@ Run the following command to install these dependencies:
 cargo install just watchexec
 ```
 
+The frontend requires [Sass](https://sass-lang.com/) to build the stylesheet. More specifically it relies on the `sass` CLI.
+For instructions on how to install it, please visit <https://sass-lang.com/install>.
+Many distributions already have a pre-built package but if all else fails you can use the Node package:
+
+```bash
+npm install -g sass
+```
+
 ### Building the Docker images
 
 For security reasons the compiler and all other tools run in a docker container.

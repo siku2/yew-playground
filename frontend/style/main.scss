@@ -1,0 +1,11 @@
+@use "components/explorer";
+@use "theme";
+
+body {
+  @include theme.colors;
+
+  background-color: var(--background-color);
+  color: var(--text-color);
+  height: 100vh;
+  margin: 0;
+}
