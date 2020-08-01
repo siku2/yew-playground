@@ -22,9 +22,7 @@ impl Component for Playground {
         }
     }
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
-        use PlaygroundMessage::*;
-
+    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
         false
     }
 

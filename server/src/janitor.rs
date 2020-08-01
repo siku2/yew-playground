@@ -16,6 +16,11 @@ pub struct Session {
     pub sandbox: Sandbox,
     pub created_at: Instant,
 }
+impl Session {
+    pub fn get_id_string(&self) -> String {
+        self.id.to_simple().to_string()
+    }
+}
 
 /// Helper type to compare `Session` based on the id.
 #[derive(Debug)]

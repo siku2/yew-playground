@@ -53,9 +53,9 @@ fn api_sandbox_create(janitor: State<Janitor>) -> Result<Json<SessionDetails>> {
     let sandbox = Sandbox::create_from_template(Path::new("template"))?;
     let session = janitor.create_session(sandbox);
     Ok(Json(SessionDetails {
-        id: session.id.to_string(),
+        id: session.get_id_string(),
         // TODO actual public url
-        public_url: format!("http://localhost:8000/proxy/{}", session.id),
+        public_url: format!("http://localhost:8000/proxy/{}", session.get_id_string()),
     }))
 }
 
