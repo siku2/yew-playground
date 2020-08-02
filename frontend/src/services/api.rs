@@ -53,6 +53,24 @@ impl Session {
         perform_json_request(req, callback)
     }
 
+    pub fn get_file(
+        &self,
+        path: &str,
+        callback: Callback<anyhow::Result<String>>,
+    ) -> anyhow::Result<FetchTask> {
+        let req = Request::get(make_api_uri(format!("/files/{}/{}", self.id, path)))
+            .body(Nothing)
+            .unwrap();
+
+        FetchService::fetch(
+            req,
+            Callback::from(move |response: Response<Text>| {
+                let body = response.into_body();
+                callback.emit(body)
+            }),
+        )
+    }
+
     pub fn compile(
         &self,
         callback: Callback<anyhow::Result<CompileResponse>>,

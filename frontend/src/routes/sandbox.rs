@@ -1,5 +1,5 @@
 use crate::{
-    components::{explorer::Explorer, playground::Playground},
+    components::{browser::Browser, editor::Editor},
     services::api::{Session, SessionRef},
     utils::NeqAssign,
 };
@@ -11,6 +11,7 @@ pub struct SandboxPageProps {
     pub id: String,
 }
 
+#[derive(Debug)]
 pub struct SandboxPage {
     props: SandboxPageProps,
     session: SessionRef,
@@ -33,11 +34,12 @@ impl Component for SandboxPage {
     }
 
     fn view(&self) -> Html {
+        let session = &self.session;
         html! {
-            <>
-                <Explorer session=Rc::clone(&self.session) />
-                <Playground />
-            </>
+            <main>
+                <Editor session=Rc::clone(session) />
+                <Browser session=Rc::clone(session) />
+            </main>
         }
     }
 }

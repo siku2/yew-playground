@@ -7,6 +7,7 @@ use std::rc::Rc;
 use yew::{
     html,
     services::fetch::FetchTask,
+    Callback,
     Component,
     ComponentLink,
     Html,
@@ -22,8 +23,10 @@ pub enum ExplorerMsg {
 #[derive(Clone, Debug, PartialEq, Properties)]
 pub struct ExplorerProps {
     pub session: SessionRef,
+    pub onclick_file: Callback<Rc<protocol::File>>,
 }
 
+#[derive(Debug)]
 pub struct Explorer {
     props: ExplorerProps,
     link: ComponentLink<Self>,
@@ -63,11 +66,12 @@ impl Component for Explorer {
                 html! { "WIP: FAILED" }
             }
             Loaded { public, src } => {
+                let onclick_file = &self.props.onclick_file;
                 html! {
-                    <div class="explorer">
-                        <Directory directory=Rc::clone(public) />
-                        <Directory directory=Rc::clone(src) />
-                    </div>
+                    <nav class="explorer">
+                        <Directory onclick_file=onclick_file.clone() start_open=true directory=Rc::clone(public) />
+                        <Directory onclick_file=onclick_file.clone() start_open=true directory=Rc::clone(src) />
+                    </nav>
                 }
             }
         }
@@ -113,19 +117,45 @@ impl ExplorerState {
 
 #[derive(Clone, Debug, PartialEq, Properties)]
 pub struct DirectoryProps {
-    directory: Rc<protocol::Directory>,
+    pub directory: Rc<protocol::Directory>,
+    pub onclick_file: Callback<Rc<protocol::File>>,
+    #[prop_or_default]
+    pub start_open: bool,
 }
 
+#[derive(Debug)]
 pub struct Directory {
     props: DirectoryProps,
     directories: Vec<Rc<protocol::Directory>>,
     files: Vec<Rc<protocol::File>>,
+    open: bool,
 }
 impl Directory {
     fn rebuild_cache(&mut self) {
-        let dir = &self.props.directory;
-        self.directories = dir.directories.iter().cloned().map(Rc::new).collect();
-        self.files = dir.files.iter().cloned().map(Rc::new).collect();
+        let protocol::Directory {
+            directories, files, ..
+        } = &*self.props.directory;
+        self.directories = directories.iter().cloned().map(Rc::new).collect();
+        self.files = files.iter().cloned().map(Rc::new).collect();
+    }
+}
+impl Directory {
+    fn view_content(&self) -> Html {
+        let onclick_file = &self.props.onclick_file;
+
+        let dir_comps = self.directories.iter().map(|dir| {
+            html! { <Directory key=dir.path.clone() onclick_file=onclick_file.clone() directory=Rc::clone(dir) /> }
+        });
+        let file_comps = self.files.iter().map(|file| {
+            html! { <File key=file.path.clone() onclick=onclick_file.clone() file=Rc::clone(file) /> }
+        });
+
+        html! {
+            <div class="explorer-dir__content">
+                { for dir_comps }
+                { for file_comps }
+            </div>
+        }
     }
 }
 impl Component for Directory {
@@ -133,10 +163,12 @@ impl Component for Directory {
     type Properties = DirectoryProps;
 
     fn create(props: Self::Properties, _link: ComponentLink<Self>) -> Self {
+        let open = props.start_open;
         let mut instance = Self {
             props,
             directories: Vec::new(),
             files: Vec::new(),
+            open,
         };
 
         instance.rebuild_cache();
@@ -157,22 +189,18 @@ impl Component for Directory {
     }
 
     fn view(&self) -> Html {
-        let dir_comps = self.directories.iter().map(|dir| {
-            html! { <Directory directory=Rc::clone(dir) /> }
-        });
-        let file_comps = self.files.iter().map(|file| {
-            html! { <File file=Rc::clone(file) /> }
-        });
-
         let directory = &self.props.directory;
+
+        let content = if self.open {
+            self.view_content()
+        } else {
+            html! {}
+        };
 
         html! {
             <div class="explorer-dir">
                 <span class="explorer-item__name">{ &directory.name }</span>
-                <div class="explorer-dir__content">
-                    { for dir_comps }
-                    { for file_comps }
-                </div>
+                { content }
             </div>
         }
     }
@@ -180,9 +208,11 @@ impl Component for Directory {
 
 #[derive(Clone, Debug, PartialEq, Properties)]
 pub struct FileProps {
-    file: Rc<protocol::File>,
+    pub file: Rc<protocol::File>,
+    pub onclick: Callback<Rc<protocol::File>>,
 }
 
+#[derive(Debug)]
 pub struct File {
     props: FileProps,
 }
@@ -203,10 +233,18 @@ impl Component for File {
     }
 
     fn view(&self) -> Html {
-        let file = &self.props.file;
+        let FileProps { file, onclick } = &self.props;
+
+        let onclick = {
+            let file = Rc::clone(file);
+            let onclick = onclick.clone();
+            Callback::from(move |_| {
+                onclick.emit(Rc::clone(&file));
+            })
+        };
 
         html! {
-            <div class="explorer-file">
+            <div class="explorer-file" onclick=onclick>
                 <span class="explorer-item__name">{ &file.name }</span>
             </div>
         }

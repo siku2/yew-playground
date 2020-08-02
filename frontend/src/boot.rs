@@ -4,6 +4,7 @@ use crate::{
 };
 use yew::{html, Component, ComponentLink, Html, ShouldRender};
 
+#[derive(Debug)]
 pub struct Root;
 impl Component for Root {
     type Message = ();
@@ -28,10 +29,12 @@ impl Component for Root {
     }
 }
 
+#[derive(Debug)]
 pub enum BootMessage {
     BundleLoaded(anyhow::Result<()>),
 }
 
+#[derive(Debug)]
 pub struct BootComponent {
     load_bundle_task: Option<LoadBundleTask>,
 }
