@@ -29,7 +29,7 @@ _build-frontend-src out_dir:
         --out-name app \
         --target web \
         frontend
-    @cd "{{out_dir}}" && rm .gitignore package.json
+    @cd "{{out_dir}}" && rm .gitignore package.json README.md
 
 _build-frontend-static out_dir:
     @just _info "adding static files"
