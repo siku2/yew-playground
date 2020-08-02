@@ -15,7 +15,7 @@ use yew::{
     Callback,
 };
 
-fn make_api_uri<T: Display>(path: T) -> String {
+fn make_api_uri(path: impl Display) -> String {
     // TODO configurable api endpoint
     format!("/api{}", path)
 }
@@ -82,7 +82,7 @@ impl Session {
             backtrace: false,
         };
 
-        post_json("/compile", &body, callback)
+        post_json(format!("/compile/{}", self.id), &body, callback)
     }
 }
 
@@ -113,7 +113,7 @@ where
 }
 
 fn post_json<Resp>(
-    path: &'static str,
+    path: impl Display,
     body: &impl Serialize,
     callback: Callback<anyhow::Result<Resp>>,
 ) -> anyhow::Result<FetchTask>

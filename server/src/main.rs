@@ -104,12 +104,18 @@ fn api_sandbox_put_file(
     Ok(())
 }
 
-#[rocket::post("/compile", data = "<req>")]
+#[rocket::post("/compile/<sandbox>", data = "<req>")]
 fn api_sandbox_compile(
     janitor: State<Janitor>,
+    sandbox: UuidParam,
     req: Json<CompileRequest>,
 ) -> Result<Json<CompileResponse>> {
-    todo!()
+    let session = get_session(&janitor, &sandbox)?;
+    session
+        .sandbox
+        .compile(&*req)
+        .map(Json)
+        .map_err(Error::from)
 }
 
 #[rocket::get("/<sandbox>")]

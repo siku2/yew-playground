@@ -20,7 +20,7 @@ use std::{
     fs::{self, Permissions},
     io,
     os::unix::fs::PermissionsExt,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
     process::Command,
 };
 use tempdir::TempDir;
@@ -35,7 +35,8 @@ const BUILD_DIR_NAME: &str = "build";
 
 #[derive(Debug)]
 pub struct Sandbox {
-    scratch: TempDir,
+    _scratch: TempDir,
+    root_dir: PathBuf,
     // other files like index.html
     public_dir: PathBuf,
     // Rust source code
@@ -47,19 +48,26 @@ impl Sandbox {
     /// Creates a Sandbox with only the directory structure.
     fn create_empty() -> Result<Self> {
         let scratch = TempDir::new("playground").map_err(Error::UnableToPrepareDir)?;
+        let root_dir = scratch
+            .path()
+            .canonicalize()
+            .map_err(Error::UnableToPrepareDir)?;
 
-        let public_dir = scratch.path().join(PUBLIC_DIR_NAME);
+        let public_dir = root_dir.join(PUBLIC_DIR_NAME);
         fs::create_dir(&public_dir).map_err(Error::UnableToPrepareDir)?;
 
-        let src_dir = scratch.path().join(SRC_DIR_NAME);
+        let src_dir = root_dir.join(SRC_DIR_NAME);
         fs::create_dir(&src_dir).map_err(Error::UnableToPrepareDir)?;
 
-        let build_dir = scratch.path().join(BUILD_DIR_NAME);
+        let build_dir = root_dir.join(BUILD_DIR_NAME);
         fs::create_dir(&build_dir).map_err(Error::UnableToPrepareDir)?;
         set_permissions_open(&build_dir)?;
 
+        log::debug!("created new sandbox (dir: {:?})", scratch);
+
         Ok(Self {
-            scratch,
+            _scratch: scratch,
+            root_dir,
             public_dir,
             src_dir,
             build_dir,
@@ -78,10 +86,9 @@ impl Sandbox {
     }
 
     pub fn get_structure(&self) -> Result<SandboxStructure> {
-        let base = self.scratch.path();
         Ok(SandboxStructure {
-            public: create_protocol_directory(base, &self.public_dir)?,
-            src: create_protocol_directory(base, &self.src_dir)?,
+            public: create_protocol_directory(&self.root_dir, &self.public_dir)?,
+            src: create_protocol_directory(&self.root_dir, &self.src_dir)?,
         })
     }
 
@@ -101,9 +108,9 @@ impl Sandbox {
     /// The only guarantee is that the resulting path will be an absolute path
     /// to a location within one of the two directories.
     pub fn get_file_path(&self, path: &Path) -> Result<PathBuf> {
-        let path = canon_join_path(self.scratch.path(), path)?;
+        let path = safe_join_path(&self.root_dir, path)?;
 
-        // make absolutely sure that the file is in either "public" or "src"
+        // make absolutely sure that the file is in either "public" or "src".
         if path.starts_with(&self.public_dir) || path.starts_with(&self.src_dir) {
             Ok(path)
         } else {
@@ -112,14 +119,14 @@ impl Sandbox {
     }
 
     pub fn get_serve_path(&self, path: &Path) -> Result<PathBuf> {
-        let mut public_path = canon_join_rel_path(&self.public_dir, path)?;
+        let mut public_path = safe_join_path(&self.public_dir, path)?;
         if public_path.is_dir() {
             public_path.push("index.html");
         }
         if public_path.is_file() {
             return Ok(public_path);
         }
-        canon_join_rel_path(&self.build_dir, path)
+        safe_join_path(&self.build_dir, path)
     }
 
     pub fn compile(&self, req: &CompileRequest) -> Result<CompileResponse> {
@@ -231,7 +238,7 @@ impl Sandbox {
 
         let mut mount_output_dir = self.build_dir.as_os_str().to_os_string();
         mount_output_dir.push(":");
-        mount_output_dir.push("/playground-result");
+        mount_output_dir.push("/playground/build");
 
         let mut cmd = commands::docker_run();
         cmd.arg("--volume")
@@ -243,36 +250,29 @@ impl Sandbox {
     }
 }
 
-/// Join two paths and canonicalize the result.
-fn canon_join_path(base: &Path, rel: &Path) -> Result<PathBuf> {
-    base.join(rel)
-        .canonicalize()
-        .map_err(|_| Error::InvalidPath(rel.to_path_buf()))
-}
-
-/// Like `canon_join_path` but makes sure that `rel` is relative to `base`.
-fn canon_join_rel_path(base: &Path, rel: &Path) -> Result<PathBuf> {
-    let path = canon_join_path(base, rel)?;
-    if path.starts_with(&path) {
-        Ok(path)
-    } else {
+/// Safely join two paths.
+/// It is assumed that `base` is already safe.
+/// The result is a path relative to `base` and only containing normal
+/// components.
+fn safe_join_path(base: &Path, rel: &Path) -> Result<PathBuf> {
+    let has_invalid_comp = rel.components().any(|comp| match comp {
+        Component::Normal(_) => false,
+        _ => true,
+    });
+    if has_invalid_comp {
         Err(Error::InvalidPath(rel.to_owned()))
+    } else {
+        Ok(base.join(rel))
     }
 }
 
-// We must create a world-writable files (rustfmt) and directories so that the
-// process inside the Docker container can write into it.
-//
-// This problem does *not* occur when using the indirection of
-// docker-machine.
-fn open_permissions() -> Permissions {
-    Permissions::from_mode(0o777)
-}
-
 fn set_permissions_open(path: &Path) -> Result<()> {
-    fs::set_permissions(path, open_permissions()).map_err(Error::UnableToSetPermissions)
+    fs::set_permissions(path, Permissions::from_mode(0o777)).map_err(Error::UnableToSetPermissions)
 }
 
+/// Copy the files from `src` to `dst`.
+/// `dst` must already exist but further subdirectories from `src` are created
+/// automatically.
 fn copy_dir(src: &Path, dst: &Path) -> io::Result<()> {
     let mut queue: VecDeque<(Cow<Path>, Cow<Path>)> = VecDeque::new();
     queue.push_back((Cow::from(src), Cow::from(dst)));

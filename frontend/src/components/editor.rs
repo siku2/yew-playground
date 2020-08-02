@@ -1,4 +1,4 @@
-use super::explorer::Explorer;
+use super::{action_bar::ActionBar, explorer::Explorer};
 use crate::{
     services::api::{Session, SessionRef},
     utils::NeqAssign,
@@ -20,7 +20,7 @@ type TabIdentifier = usize;
 #[derive(Debug)]
 pub enum EditorMsg {
     OpenFile(Rc<protocol::File>),
-    GotFileResponse(TabIdentifier, anyhow::Result<String>),
+    FileResponse(TabIdentifier, anyhow::Result<String>),
 }
 
 #[derive(Clone, Debug, PartialEq, Properties)]
@@ -57,7 +57,7 @@ impl Editor {
             &self.props.session,
             &file.path,
             self.link
-                .callback(move |resp| EditorMsg::GotFileResponse(id, resp)),
+                .callback(move |resp| EditorMsg::FileResponse(id, resp)),
         );
         let tab = EditorTab {
             id,
@@ -152,7 +152,7 @@ impl Component for Editor {
                 self.selected = Some(id);
                 true
             }
-            GotFileResponse(id, resp) => {
+            FileResponse(id, resp) => {
                 if let Some(tab) = self.get_tab_mut(id) {
                     tab.content.handle_response(resp);
                     true
@@ -176,6 +176,7 @@ impl Component for Editor {
                 <Explorer session=Rc::clone(session) onclick_file=onclick_file />
                 { self.view_navbar() }
                 { self.view_content() }
+                <ActionBar session=Rc::clone(session) oncompile=Callback::noop() />
             </div>
         }
     }
@@ -204,8 +205,8 @@ impl ContentState {
         )
     }
 
-    fn handle_response(&mut self, response: anyhow::Result<String>) {
-        match response {
+    fn handle_response(&mut self, resp: anyhow::Result<String>) {
+        match resp {
             Ok(content) => {
                 *self = Self::Loaded(content);
             }
