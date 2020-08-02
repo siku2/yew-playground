@@ -55,7 +55,7 @@ fn api_sandbox_create(janitor: State<Janitor>) -> Result<Json<SessionDetails>> {
     Ok(Json(SessionDetails {
         id: session.get_id_string(),
         // TODO actual public url
-        public_url: format!("http://localhost:8000/proxy/{}", session.get_id_string()),
+        public_url: format!("http://localhost:8000/proxy/{}/", session.get_id_string()),
     }))
 }
 
@@ -75,8 +75,8 @@ fn api_sandbox_list_files(
     Ok(Json(structure))
 }
 
-#[rocket::get("/files/<sandbox>/src/<path..>")]
-fn api_sandbox_get_src_file(
+#[rocket::get("/files/<sandbox>/<path..>")]
+fn api_sandbox_get_file(
     janitor: State<Janitor>,
     sandbox: UuidParam,
     path: PathBuf,
@@ -84,22 +84,22 @@ fn api_sandbox_get_src_file(
     let session = get_session(&janitor, &sandbox)?;
     let file = session
         .sandbox
-        .get_src_path(&path)
+        .get_existing_file_path(&path)
         .and_then(|path| NamedFile::open(path).ok())
         .ok_or_else(|| Error::from(protocol::Error::SandboxFileNotFound))?;
 
     Ok(Content(ContentType::Plain, file))
 }
 
-#[rocket::put("/files/<sandbox>/src/<path..>", data = "<code>")]
-fn api_sandbox_put_src_file(
+#[rocket::put("/files/<sandbox>/<path..>", data = "<code>")]
+fn api_sandbox_put_file(
     janitor: State<Janitor>,
     sandbox: UuidParam,
     path: PathBuf,
     code: String,
 ) -> Result<()> {
     let session = get_session(&janitor, &sandbox)?;
-    session.sandbox.write_src_file(&path, &code)?;
+    session.sandbox.write_to_file(&path, &code)?;
     Ok(())
 }
 
@@ -124,6 +124,7 @@ fn sandbox_get_file(
     session
         .sandbox
         .get_www_path(&path)
+        .ok()
         .and_then(|path| NamedFile::open(path).ok())
 }
 
@@ -135,8 +136,8 @@ fn main() {
             rocket::routes![
                 api_sandbox_create,
                 api_sandbox_list_files,
-                api_sandbox_get_src_file,
-                api_sandbox_put_src_file,
+                api_sandbox_get_file,
+                api_sandbox_put_file,
                 api_sandbox_compile,
             ],
         )

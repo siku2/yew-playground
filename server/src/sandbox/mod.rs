@@ -35,7 +35,7 @@ const BUILD_DIR_NAME: &str = "build";
 
 #[derive(Debug)]
 pub struct Sandbox {
-    _scratch: TempDir,
+    scratch: TempDir,
     // other files like index.html
     public_dir: PathBuf,
     // Rust source code
@@ -63,7 +63,7 @@ impl Sandbox {
         let www_dir = scratch.path().join("www");
 
         Ok(Self {
-            _scratch: scratch,
+            scratch,
             public_dir,
             src_dir,
             build_dir,
@@ -83,27 +83,58 @@ impl Sandbox {
     }
 
     pub fn get_structure(&self) -> Result<SandboxStructure> {
-        let base = self._scratch.path();
+        let base = self.scratch.path();
         Ok(SandboxStructure {
             public: create_protocol_directory(base, &self.public_dir)?,
             src: create_protocol_directory(base, &self.src_dir)?,
         })
     }
 
-    pub fn write_src_file(&self, path: &Path, code: &str) -> Result<()> {
-        let path = prepare_path(&self.src_dir, path)?;
-        fs::write(&path, code).map_err(Error::UnableToWriteFile)?;
+    pub fn write_to_file(&self, path: &Path, content: &str) -> Result<()> {
+        let path = self.get_file_path(path)?;
+        fs::write(&path, content).map_err(Error::UnableToWriteFile)?;
 
-        log::debug!("wrote {} bytes of source to {}", code.len(), path.display());
+        log::debug!(
+            "wrote {} bytes of source to {}",
+            content.len(),
+            path.display()
+        );
         Ok(())
     }
 
-    pub fn get_src_path(&self, path: &Path) -> Option<PathBuf> {
-        prepare_existing_file_path(&self.src_dir, path)
+    pub fn get_file_path(&self, path: &Path) -> Result<PathBuf> {
+        let path = self
+            .scratch
+            .path()
+            .join(path)
+            .canonicalize()
+            .map_err(|_| Error::InvalidPath(path.to_path_buf()))?;
+
+        // make absolutely sure that the file is in either "public" or "src"
+        if path.starts_with(&self.public_dir) || path.starts_with(&self.src_dir) {
+            Ok(path)
+        } else {
+            Err(Error::InvalidPath(path.to_path_buf()))
+        }
     }
 
-    pub fn get_www_path(&self, path: &Path) -> Option<PathBuf> {
-        prepare_existing_file_path(&self.www_dir, path)
+    pub fn get_existing_file_path(&self, path: &Path) -> Option<PathBuf> {
+        self.get_file_path(path).ok().filter(|path| path.is_file())
+    }
+
+    pub fn get_www_path(&self, path: &Path) -> Result<PathBuf> {
+        let path = self
+            .www_dir
+            .join(path)
+            .canonicalize()
+            .map_err(|_| Error::InvalidPath(path.to_path_buf()))?;
+
+        // make absolutely sure that the file is in "www"
+        if path.starts_with(&self.www_dir) {
+            Ok(path)
+        } else {
+            Err(Error::InvalidPath(path.to_path_buf()))
+        }
     }
 
     pub fn compile(&self, req: &CompileRequest) -> Result<CompileResponse> {
@@ -260,23 +291,6 @@ fn copy_dir(src: &Path, dst: &Path) -> io::Result<()> {
     }
 
     Ok(())
-}
-
-fn prepare_path(base: &Path, rel: &Path) -> Result<PathBuf> {
-    let path = base
-        .join(rel)
-        .canonicalize()
-        .map_err(|_| Error::InvalidPath(rel.to_path_buf()))?;
-
-    if path.starts_with(&base) {
-        Ok(path)
-    } else {
-        Err(Error::InvalidPath(rel.to_path_buf()))
-    }
-}
-
-fn prepare_existing_file_path(base: &Path, rel: &Path) -> Option<PathBuf> {
-    prepare_path(base, rel).ok().filter(|path| path.is_file())
 }
 
 fn path_to_string(path: &Path) -> Result<String> {
