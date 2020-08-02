@@ -21,7 +21,8 @@ impl Component for Browser {
     type Properties = BrowserProps;
 
     fn create(props: Self::Properties, _link: ComponentLink<Self>) -> Self {
-        let url = format!("http://localhost:8000/proxy/{}", props.session.id);
+        // TODO get proper url
+        let url = format!("http://localhost:8000/proxy/{}/", props.session.id);
         Self { props, url }
     }
 

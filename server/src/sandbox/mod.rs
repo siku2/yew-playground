@@ -42,8 +42,6 @@ pub struct Sandbox {
     src_dir: PathBuf,
     // build artefacts
     build_dir: PathBuf,
-    // served data
-    www_dir: PathBuf,
 }
 impl Sandbox {
     /// Creates a Sandbox with only the directory structure.
@@ -60,14 +58,11 @@ impl Sandbox {
         fs::create_dir(&build_dir).map_err(Error::UnableToPrepareDir)?;
         set_permissions_open(&build_dir)?;
 
-        let www_dir = scratch.path().join("www");
-
         Ok(Self {
             scratch,
             public_dir,
             src_dir,
             build_dir,
-            www_dir,
         })
     }
 
@@ -102,13 +97,11 @@ impl Sandbox {
         Ok(())
     }
 
+    /// Get a path for either the "public" or "src" directory.
+    /// The only guarantee is that the resulting path will be an absolute path
+    /// to a location within one of the two directories.
     pub fn get_file_path(&self, path: &Path) -> Result<PathBuf> {
-        let path = self
-            .scratch
-            .path()
-            .join(path)
-            .canonicalize()
-            .map_err(|_| Error::InvalidPath(path.to_path_buf()))?;
+        let path = canon_join_path(self.scratch.path(), path)?;
 
         // make absolutely sure that the file is in either "public" or "src"
         if path.starts_with(&self.public_dir) || path.starts_with(&self.src_dir) {
@@ -118,23 +111,15 @@ impl Sandbox {
         }
     }
 
-    pub fn get_existing_file_path(&self, path: &Path) -> Option<PathBuf> {
-        self.get_file_path(path).ok().filter(|path| path.is_file())
-    }
-
-    pub fn get_www_path(&self, path: &Path) -> Result<PathBuf> {
-        let path = self
-            .www_dir
-            .join(path)
-            .canonicalize()
-            .map_err(|_| Error::InvalidPath(path.to_path_buf()))?;
-
-        // make absolutely sure that the file is in "www"
-        if path.starts_with(&self.www_dir) {
-            Ok(path)
-        } else {
-            Err(Error::InvalidPath(path.to_path_buf()))
+    pub fn get_serve_path(&self, path: &Path) -> Result<PathBuf> {
+        let mut public_path = canon_join_rel_path(&self.public_dir, path)?;
+        if public_path.is_dir() {
+            public_path.push("index.html");
         }
+        if public_path.is_file() {
+            return Ok(public_path);
+        }
+        canon_join_rel_path(&self.build_dir, path)
     }
 
     pub fn compile(&self, req: &CompileRequest) -> Result<CompileResponse> {
@@ -255,6 +240,23 @@ impl Sandbox {
             .arg(&mount_output_dir);
 
         cmd
+    }
+}
+
+/// Join two paths and canonicalize the result.
+fn canon_join_path(base: &Path, rel: &Path) -> Result<PathBuf> {
+    base.join(rel)
+        .canonicalize()
+        .map_err(|_| Error::InvalidPath(rel.to_path_buf()))
+}
+
+/// Like `canon_join_path` but makes sure that `rel` is relative to `base`.
+fn canon_join_rel_path(base: &Path, rel: &Path) -> Result<PathBuf> {
+    let path = canon_join_path(base, rel)?;
+    if path.starts_with(&path) {
+        Ok(path)
+    } else {
+        Err(Error::InvalidPath(rel.to_owned()))
     }
 }
 

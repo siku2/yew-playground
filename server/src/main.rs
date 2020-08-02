@@ -84,7 +84,8 @@ fn api_sandbox_get_file(
     let session = get_session(&janitor, &sandbox)?;
     let file = session
         .sandbox
-        .get_existing_file_path(&path)
+        .get_file_path(&path)
+        .ok()
         .and_then(|path| NamedFile::open(path).ok())
         .ok_or_else(|| Error::from(protocol::Error::SandboxFileNotFound))?;
 
@@ -111,21 +112,28 @@ fn api_sandbox_compile(
     todo!()
 }
 
-/// Returns a file from a sandbox
+#[rocket::get("/<sandbox>")]
+fn sandbox_get_index(
+    janitor: State<Janitor>,
+    sandbox: UuidParam,
+) -> std::result::Result<NamedFile, Status> {
+    sandbox_get_file(janitor, sandbox, "index.html".into())
+}
+
 #[rocket::get("/<sandbox>/<path..>")]
 fn sandbox_get_file(
     janitor: State<Janitor>,
     sandbox: UuidParam,
     path: PathBuf,
-) -> Option<NamedFile> {
-    // TODO return error 400 if the sandbox doesn't exist;
-    let session = janitor.get_session(&*sandbox)?;
+) -> std::result::Result<NamedFile, Status> {
+    let session = get_session(&janitor, &sandbox).map_err(|_| Status::BadRequest)?;
 
     session
         .sandbox
-        .get_www_path(&path)
+        .get_serve_path(&path)
         .ok()
         .and_then(|path| NamedFile::open(path).ok())
+        .ok_or(Status::NotFound)
 }
 
 fn main() {
@@ -141,7 +149,10 @@ fn main() {
                 api_sandbox_compile,
             ],
         )
-        .mount("/proxy", rocket::routes![sandbox_get_file])
+        .mount(
+            "/proxy",
+            rocket::routes![sandbox_get_index, sandbox_get_file],
+        )
         // TODO make static location configurable
         .mount("/", SPAStaticFiles::new("www"))
         .launch();
