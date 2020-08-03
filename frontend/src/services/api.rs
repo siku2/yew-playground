@@ -71,6 +71,25 @@ impl Session {
         )
     }
 
+    pub fn put_file(
+        &self,
+        path: &str,
+        content: String,
+        callback: Callback<anyhow::Result<()>>,
+    ) -> anyhow::Result<FetchTask> {
+        let req = Request::put(make_api_uri(format!("/files/{}/{}", self.id, path)))
+            .body(Ok(content))
+            .unwrap();
+
+        FetchService::fetch(
+            req,
+            Callback::from(move |response: Response<Text>| {
+                let body = response.into_body().map(|_| ());
+                callback.emit(body)
+            }),
+        )
+    }
+
     pub fn compile(
         &self,
         callback: Callback<anyhow::Result<CompileResponse>>,

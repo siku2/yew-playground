@@ -1,9 +1,21 @@
 use crate::{
     services::{api::SessionRef, locale},
-    utils::NeqAssign,
+    utils::{ComponentRef, NeqAssign},
 };
 use web_sys::HtmlIFrameElement;
 use yew::{html, Component, ComponentLink, Html, NodeRef, Properties, ShouldRender};
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Controller(ComponentRef<Browser>);
+impl Controller {
+    fn populate(&self, link: ComponentLink<Browser>) {
+        self.0.populate(link);
+    }
+
+    pub fn reload(&self) -> bool {
+        self.0.send_message(BrowserMsg::Reload)
+    }
+}
 
 #[derive(Debug)]
 pub enum BrowserMsg {
@@ -13,6 +25,7 @@ pub enum BrowserMsg {
 #[derive(Clone, Debug, PartialEq, Properties)]
 pub struct BrowserProps {
     pub session: SessionRef,
+    pub controller: Controller,
 }
 
 #[derive(Debug)]
@@ -27,6 +40,8 @@ impl Component for Browser {
     type Properties = BrowserProps;
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
+        props.controller.populate(link.clone());
+
         // TODO get proper url
         let url = format!("http://localhost:8000/proxy/{}/", props.session.id);
         Self {

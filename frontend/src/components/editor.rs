@@ -1,9 +1,13 @@
 use super::{action_bar::ActionBar, explorer::Explorer};
 use crate::{
-    services::api::{Session, SessionRef},
+    services::{
+        api::{Session, SessionRef},
+        locale,
+    },
     utils::NeqAssign,
 };
-use std::rc::Rc;
+use protocol::CompileResponse;
+use std::{rc::Rc, slice};
 use yew::{
     html,
     services::fetch::FetchTask,
@@ -11,6 +15,7 @@ use yew::{
     Component,
     ComponentLink,
     Html,
+    InputData,
     Properties,
     ShouldRender,
 };
@@ -22,62 +27,26 @@ pub enum EditorMsg {
     OpenFile(Rc<protocol::File>),
     FileResponse(TabIdentifier, anyhow::Result<String>),
     SelectTab(TabIdentifier),
+    ChangeTabContent(TabIdentifier, String),
+    SaveTab(TabIdentifier),
+    SaveResponse(TabIdentifier, anyhow::Result<()>),
 }
 
 #[derive(Clone, Debug, PartialEq, Properties)]
 pub struct EditorProps {
     pub session: SessionRef,
+    pub oncompile: Callback<CompileResponse>,
 }
 
 #[derive(Debug)]
 pub struct Editor {
     props: EditorProps,
     link: ComponentLink<Self>,
-    next_tab_id: TabIdentifier,
-    tabs: Vec<EditorTab>,
+    tabs: Tabs,
     selected: Option<TabIdentifier>,
 }
 impl Editor {
-    fn generate_next_tab_id(&mut self) -> TabIdentifier {
-        let id = self.next_tab_id;
-        self.next_tab_id = id.wrapping_add(1);
-        id
-    }
-
-    fn get_tab(&self, id: TabIdentifier) -> Option<&EditorTab> {
-        self.tabs.iter().find(|tab| tab.id == id)
-    }
-
-    fn get_tab_mut(&mut self, id: TabIdentifier) -> Option<&mut EditorTab> {
-        self.tabs.iter_mut().find(|tab| tab.id == id)
-    }
-
-    fn force_create_tab(&mut self, file: Rc<protocol::File>) -> TabIdentifier {
-        let id = self.generate_next_tab_id();
-        let content = ContentState::start(
-            &self.props.session,
-            &file.path,
-            self.link
-                .callback(move |resp| EditorMsg::FileResponse(id, resp)),
-        );
-        let tab = EditorTab {
-            id,
-            file,
-            content,
-            dirty: false,
-        };
-        self.tabs.push(tab);
-        id
-    }
-
-    fn find_or_create_tab(&mut self, file: Rc<protocol::File>) -> TabIdentifier {
-        self.tabs
-            .iter()
-            .find_map(|tab| if tab.file == file { Some(tab.id) } else { None })
-            .unwrap_or_else(|| self.force_create_tab(file))
-    }
-
-    fn render_tab(&self, tab: &EditorTab) -> Html {
+    fn render_tab(&self, tab: &Tab) -> Html {
         let mut classes = vec!["htbar__tab"];
         if matches!(self.selected, Some(id) if id == tab.id) {
             classes.push("htbar__tab--selected");
@@ -86,14 +55,16 @@ impl Editor {
             classes.push("htbar__tab--dirty");
         }
 
-        let onclick = {
-            let id = tab.id;
-            self.link.callback(move |_| EditorMsg::SelectTab(id))
-        };
+        let tab_id = tab.id;
+        let onclick_tab = self.link.callback(move |_| EditorMsg::SelectTab(tab_id));
+        let onclick_save = self.link.callback(move |_| EditorMsg::SaveTab(tab_id));
 
         html! {
-            <div key=tab.file.path.clone() class=classes role="tab" onclick=onclick>
+            <div key=tab.file.path.clone() class=classes role="tab" onclick=onclick_tab>
                 { &tab.file.name }
+                <button onclick=onclick_save>
+                    { locale::get("editor-save", None) }
+                </button>
             </div>
         }
     }
@@ -115,7 +86,7 @@ impl Editor {
 
     fn view_content(&self) -> Html {
         if let Some(selected) = self.selected {
-            self.view_tab_content(self.get_tab(selected).expect("selected tab doesn't exist"))
+            self.view_tab_content(self.tabs.get(selected).expect("selected tab doesn't exist"))
         } else {
             // TODO render welcome
             html! {
@@ -124,12 +95,12 @@ impl Editor {
         }
     }
 
-    fn view_tab_content(&self, tab: &EditorTab) -> Html {
+    fn view_tab_content(&self, tab: &Tab) -> Html {
         use ContentState::*;
-        match &tab.content {
+        match &tab.state {
             Loading(_) => {
                 // TODO render loading state
-                html! { "WIP: loading content" }
+                html! { "WIP: loading" }
             }
             Failed(err) => {
                 // TODO render error state
@@ -137,9 +108,14 @@ impl Editor {
                     { format!("WIP: failed: {}", err) }
                 }
             }
-            Loaded(content) => {
+            Idle => {
+                let content = tab.content.clone().unwrap_or_default();
+                let tab_id = tab.id;
+                let oninput = self.link.callback(move |input: InputData| {
+                    EditorMsg::ChangeTabContent(tab_id, input.value)
+                });
                 html! {
-                    <textarea>
+                    <textarea oninput=oninput>
                         { content }
                     </textarea>
                 }
@@ -155,8 +131,7 @@ impl Component for Editor {
         Self {
             props,
             link,
-            next_tab_id: 0,
-            tabs: Vec::new(),
+            tabs: Tabs::new(),
             selected: None,
         }
     }
@@ -165,13 +140,15 @@ impl Component for Editor {
         use EditorMsg::*;
         match msg {
             OpenFile(file) => {
-                let id = self.find_or_create_tab(file);
+                let id = self
+                    .tabs
+                    .find_or_create(&self.props.session, &self.link, file);
                 self.selected = Some(id);
                 true
             }
             FileResponse(id, resp) => {
-                if let Some(tab) = self.get_tab_mut(id) {
-                    tab.content.handle_response(resp);
+                if let Some(tab) = self.tabs.get_mut(id) {
+                    tab.handle_load_response(resp);
                     true
                 } else {
                     log::debug!("received response for tab which no longer exists: {}", id);
@@ -182,6 +159,38 @@ impl Component for Editor {
                 self.selected = Some(id);
                 true
             }
+            ChangeTabContent(id, content) => {
+                if let Some(tab) = self.tabs.get_mut(id) {
+                    tab.change_content(content);
+                    true
+                } else {
+                    false
+                }
+            }
+            SaveTab(id) => {
+                if let Some(tab) = self.tabs.get_mut(id) {
+                    let ok = tab.save(
+                        &self.props.session,
+                        self.link
+                            .callback(move |resp| EditorMsg::SaveResponse(id, resp)),
+                    );
+                    if !ok {
+                        log::warn!("can't save file");
+                    }
+                    true
+                } else {
+                    false
+                }
+            }
+            SaveResponse(id, resp) => {
+                if let Some(tab) = self.tabs.get_mut(id) {
+                    tab.handle_save_response(resp);
+                    true
+                } else {
+                    log::debug!("received response for tab which no longer exists: {}", id);
+                    false
+                }
+            }
         }
     }
 
@@ -190,34 +199,173 @@ impl Component for Editor {
     }
 
     fn view(&self) -> Html {
-        let EditorProps { session } = &self.props;
+        let EditorProps {
+            session, oncompile, ..
+        } = &self.props;
         let onclick_file = self.link.callback(EditorMsg::OpenFile);
         html! {
             <div class="editor">
                 <Explorer session=Rc::clone(session) onclick_file=onclick_file />
                 { self.view_editor_window() }
-                <ActionBar session=Rc::clone(session) oncompile=Callback::noop() />
+                <ActionBar session=Rc::clone(session) oncompile=oncompile.clone() />
             </div>
         }
     }
 }
 
 #[derive(Debug)]
-struct EditorTab {
+struct Tabs {
+    tabs: Vec<Tab>,
+    next_tab_id: usize,
+}
+impl Tabs {
+    fn new() -> Self {
+        Self {
+            tabs: Vec::new(),
+            next_tab_id: 0,
+        }
+    }
+
+    fn generate_tab_id(&mut self) -> TabIdentifier {
+        let id = self.next_tab_id;
+        self.next_tab_id = id.wrapping_add(1);
+        id
+    }
+
+    fn iter(&self) -> slice::Iter<'_, Tab> {
+        self.tabs.iter()
+    }
+
+    fn get(&self, id: TabIdentifier) -> Option<&Tab> {
+        self.tabs.iter().find(|tab| tab.id == id)
+    }
+
+    fn get_mut(&mut self, id: TabIdentifier) -> Option<&mut Tab> {
+        self.tabs.iter_mut().find(|tab| tab.id == id)
+    }
+
+    fn create(
+        &mut self,
+        session: &Session,
+        link: &ComponentLink<Editor>,
+        file: Rc<protocol::File>,
+    ) -> TabIdentifier {
+        let id = self.generate_tab_id();
+        let tab = Tab::open(
+            session,
+            id,
+            file,
+            link.callback(move |resp| EditorMsg::FileResponse(id, resp)),
+        );
+        self.tabs.push(tab);
+        id
+    }
+
+    fn find_or_create(
+        &mut self,
+        session: &Session,
+        link: &ComponentLink<Editor>,
+        file: Rc<protocol::File>,
+    ) -> TabIdentifier {
+        self.iter()
+            .find_map(|tab| if tab.file == file { Some(tab.id) } else { None })
+            .unwrap_or_else(|| self.create(session, link, file))
+    }
+}
+
+#[derive(Debug)]
+struct Tab {
     id: TabIdentifier,
     file: Rc<protocol::File>,
-    content: ContentState,
+    content: Option<String>,
+    state: ContentState,
     dirty: bool,
+}
+impl Tab {
+    fn open(
+        session: &Session,
+        id: TabIdentifier,
+        file: Rc<protocol::File>,
+        callback: Callback<anyhow::Result<String>>,
+    ) -> Self {
+        let state = ContentState::load(session, &file.path, callback);
+        Self {
+            id,
+            file,
+            content: None,
+            state,
+            dirty: false,
+        }
+    }
+
+    fn save(&mut self, session: &Session, callback: Callback<anyhow::Result<()>>) -> bool {
+        if self.state.is_loading() {
+            return false;
+        }
+
+        if let Some(content) = &self.content {
+            self.state = ContentState::save(session, &self.file.path, content.clone(), callback);
+            true
+        } else {
+            false
+        }
+    }
+
+    fn handle_load_response(&mut self, resp: anyhow::Result<String>) {
+        let state = &mut self.state;
+        if !state.is_loading() {
+            log::debug!("ignoring response: not loading");
+            return;
+        }
+
+        match resp {
+            Ok(content) => {
+                self.content.replace(content);
+                *state = ContentState::Idle;
+            }
+            Err(err) => {
+                log::error!("error loading file: {}", err);
+                *state = ContentState::Failed(err);
+            }
+        }
+    }
+
+    fn handle_save_response(&mut self, resp: anyhow::Result<()>) {
+        let state = &mut self.state;
+        if !state.is_loading() {
+            log::debug!("ignoring response: not loading");
+            return;
+        }
+
+        match resp {
+            Ok(_) => {
+                *state = ContentState::Idle;
+                self.dirty = false;
+            }
+            Err(err) => {
+                log::error!("error saving file: {}", err);
+                *state = ContentState::Failed(err);
+            }
+        }
+    }
+
+    fn change_content(&mut self, content: String) {
+        // TODO dirty flag has race condition with save
+        let old_content = self.content.replace(content);
+        if old_content != self.content {
+            self.dirty = true;
+        }
+    }
 }
 
 #[derive(Debug)]
 enum ContentState {
     Loading(FetchTask),
     Failed(anyhow::Error),
-    Loaded(String),
+    Idle,
 }
 impl ContentState {
-    fn start(session: &Session, path: &str, callback: Callback<anyhow::Result<String>>) -> Self {
+    fn load(session: &Session, path: &str, callback: Callback<anyhow::Result<String>>) -> Self {
         Self::Loading(
             session
                 .get_file(path, callback)
@@ -225,15 +373,20 @@ impl ContentState {
         )
     }
 
-    fn handle_response(&mut self, resp: anyhow::Result<String>) {
-        match resp {
-            Ok(content) => {
-                *self = Self::Loaded(content);
-            }
-            Err(err) => {
-                log::error!("error loading file: {}", err);
-                *self = Self::Failed(err);
-            }
-        }
+    fn save(
+        session: &Session,
+        path: &str,
+        content: String,
+        callback: Callback<anyhow::Result<()>>,
+    ) -> Self {
+        Self::Loading(
+            session
+                .put_file(path, content, callback)
+                .expect("failed to create save request"),
+        )
+    }
+
+    fn is_loading(&self) -> bool {
+        matches!(self, Self::Loading(_))
     }
 }

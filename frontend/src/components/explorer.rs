@@ -115,6 +115,11 @@ impl ExplorerState {
     }
 }
 
+#[derive(Debug)]
+pub enum DirectoryMsg {
+    ToggleOpen,
+}
+
 #[derive(Clone, Debug, PartialEq, Properties)]
 pub struct DirectoryProps {
     pub directory: Rc<protocol::Directory>,
@@ -126,6 +131,7 @@ pub struct DirectoryProps {
 #[derive(Debug)]
 pub struct Directory {
     props: DirectoryProps,
+    link: ComponentLink<Self>,
     directories: Vec<Rc<protocol::Directory>>,
     files: Vec<Rc<protocol::File>>,
     open: bool,
@@ -138,8 +144,7 @@ impl Directory {
         self.directories = directories.iter().cloned().map(Rc::new).collect();
         self.files = files.iter().cloned().map(Rc::new).collect();
     }
-}
-impl Directory {
+
     fn view_content(&self) -> Html {
         let onclick_file = &self.props.onclick_file;
 
@@ -159,13 +164,14 @@ impl Directory {
     }
 }
 impl Component for Directory {
-    type Message = ();
+    type Message = DirectoryMsg;
     type Properties = DirectoryProps;
 
-    fn create(props: Self::Properties, _link: ComponentLink<Self>) -> Self {
+    fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
         let open = props.start_open;
         let mut instance = Self {
             props,
+            link,
             directories: Vec::new(),
             files: Vec::new(),
             open,
@@ -175,8 +181,14 @@ impl Component for Directory {
         instance
     }
 
-    fn update(&mut self, _msg: Self::Message) -> ShouldRender {
-        false
+    fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        use DirectoryMsg::*;
+        match msg {
+            ToggleOpen => {
+                self.open = !self.open;
+                true
+            }
+        }
     }
 
     fn change(&mut self, props: Self::Properties) -> ShouldRender {
@@ -197,9 +209,11 @@ impl Component for Directory {
             html! {}
         };
 
+        let onclick_name = self.link.callback(|_| DirectoryMsg::ToggleOpen);
+
         html! {
             <div class="explorer-dir">
-                <span class="explorer-item__name">{ &directory.name }</span>
+                <span class="explorer-item__name" onclick=onclick_name>{ &directory.name }</span>
                 { content }
             </div>
         }

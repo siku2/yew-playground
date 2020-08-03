@@ -7,3 +7,5 @@ action_bar-clippy = Clippy
 
 browser-reload = Reload
 browser-iframe-title = Playground Output
+
+editor-save = Save

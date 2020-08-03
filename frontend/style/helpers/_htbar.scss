@@ -19,5 +19,10 @@
     &--selected {
       background-color: blue;
     }
+
+    // TODO: this should be a modifier of the editor tab
+    &--dirty {
+      font-weight: 900;
+    }
   }
 }
