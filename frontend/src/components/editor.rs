@@ -21,6 +21,7 @@ type TabIdentifier = usize;
 pub enum EditorMsg {
     OpenFile(Rc<protocol::File>),
     FileResponse(TabIdentifier, anyhow::Result<String>),
+    SelectTab(TabIdentifier),
 }
 
 #[derive(Clone, Debug, PartialEq, Properties)]
@@ -76,23 +77,39 @@ impl Editor {
             .unwrap_or_else(|| self.force_create_tab(file))
     }
 
-    fn render_tab(tab: &EditorTab, is_selected: bool) -> Html {
+    fn render_tab(&self, tab: &EditorTab) -> Html {
+        let mut classes = vec!["htbar__tab"];
+        if matches!(self.selected, Some(id) if id == tab.id) {
+            classes.push("htbar__tab--selected");
+        }
+        if tab.dirty {
+            classes.push("htbar__tab--dirty");
+        }
+
+        let onclick = {
+            let id = tab.id;
+            self.link.callback(move |_| EditorMsg::SelectTab(id))
+        };
+
         html! {
-            <div>
+            <div key=tab.file.path.clone() class=classes role="tab" onclick=onclick>
                 { &tab.file.name }
             </div>
         }
     }
 
-    fn view_navbar(&self) -> Html {
-        let tab_comps = self
-            .tabs
-            .iter()
-            .map(|tab| Self::render_tab(tab, Some(tab.id) == self.selected));
+    fn view_editor_window(&self) -> Html {
+        let tab_comps = self.tabs.iter().map(|tab| self.render_tab(tab));
+
         html! {
-            <nav class="editor__nav">
-                { for tab_comps }
-            </nav>
+            <div class="editor-window">
+                <nav class="htbar htbar--scroll" role="tablist">
+                    { for tab_comps }
+                </nav>
+                <div class="editor-window__content">
+                    { self.view_content() }
+                </div>
+            </div>
         }
     }
 
@@ -161,6 +178,10 @@ impl Component for Editor {
                     false
                 }
             }
+            SelectTab(id) => {
+                self.selected = Some(id);
+                true
+            }
         }
     }
 
@@ -174,8 +195,7 @@ impl Component for Editor {
         html! {
             <div class="editor">
                 <Explorer session=Rc::clone(session) onclick_file=onclick_file />
-                { self.view_navbar() }
-                { self.view_content() }
+                { self.view_editor_window() }
                 <ActionBar session=Rc::clone(session) oncompile=Callback::noop() />
             </div>
         }

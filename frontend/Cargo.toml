@@ -7,9 +7,11 @@ edition = "2018"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+[features]
+default = ["console_log"]
+
 [dependencies]
 anyhow = "1.0"
-console_log = { version = "0.2", features = ["color"], optional = true }
 fluent = "0.12"
 fluent-syntax = "0.9"
 log = "0.4"
@@ -21,5 +23,11 @@ wasm-bindgen = "0.2"
 yew = "0.17"
 yew-router = "0.14"
 
-[features]
-default = ["console_log"]
+[dependencies.console_log]
+version = "0.2"
+features = ["color"]
+optional = true
+
+[dependencies.web-sys]
+version = "0.3"
+features = ["HtmlIFrameElement", "Location", "Window"]

@@ -1,0 +1,21 @@
+@use "helpers/htbar";
+
+.editor {
+  background-color: red;
+
+  display: flex;
+  min-height: 20em;
+  width: 100%;
+}
+
+.editor-window {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+
+  &__content {
+    flex: 1;
+    overflow-y: scroll;
+  }
+}

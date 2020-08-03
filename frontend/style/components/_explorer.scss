@@ -1,5 +1,8 @@
 .explorer {
+  background-color: blue;
+
   overflow-x: hidden;
+  overflow-y: auto;
   position: relative;
   width: 10em;
 }

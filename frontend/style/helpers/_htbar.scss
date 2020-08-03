@@ -1,0 +1,23 @@
+// horizontal tab bar
+.htbar {
+  background-color: green;
+
+  display: flex;
+  height: 3em;
+
+  &--scroll {
+    overflow-x: auto;
+  }
+
+  &__tab {
+    background-color: darkgreen;
+
+    flex: 1;
+    max-width: 10em;
+    min-width: 6em;
+
+    &--selected {
+      background-color: blue;
+    }
+  }
+}

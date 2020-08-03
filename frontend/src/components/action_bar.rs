@@ -70,7 +70,9 @@ impl Component for ActionBar {
     fn view(&self) -> Html {
         let onclick_compile = self.link.callback(|_| ActionBarMsg::Compile);
         html! {
-          <button onclick=onclick_compile>{ locale::get("action_bar-compile", None) }</button>
+            <div class="action-bar">
+                <button onclick=onclick_compile>{ locale::get("action_bar-compile", None) }</button>
+            </div>
         }
     }
 }

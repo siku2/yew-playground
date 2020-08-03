@@ -1,0 +1,14 @@
+.browser {
+  background-color: grey;
+
+  display: flex;
+  flex-direction: column;
+  min-width: 30em;
+  padding-top: 1.5em;
+
+  &__frame {
+    background-color: Window;
+    flex: 1;
+    min-height: 20em;
+  }
+}
