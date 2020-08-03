@@ -34,7 +34,7 @@ Run the following command to install these dependencies:
 cargo install just watchexec
 ```
 
-The frontend requires [Sass](https://sass-lang.com/) to build the stylesheet. More specifically it relies on the `sass` CLI.
+The frontend requires [Sass](https://sass-lang.com/) to build the stylesheet. More specifically, it relies on the Dart Sass CLI.
 For instructions on how to install it, please visit <https://sass-lang.com/install>.
 Many distributions already have a pre-built package but if all else fails you can use the Node package:
 
