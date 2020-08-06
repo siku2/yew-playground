@@ -167,6 +167,10 @@ fn cargo_tool_version(command: Command) -> Result<Version> {
     })
 }
 
+pub fn cargo_color() -> Vec<&'static str> {
+    vec!["cargo", "--color=always"]
+}
+
 pub fn wasm_pack_build(_channel: Channel, mode: Mode, out_dir: &'static str) -> Vec<&'static str> {
     let mut cmd = vec!["wasm-pack", "build", "--no-typescript"];
     cmd.extend(&["--mode", "no-install"]);

@@ -188,7 +188,8 @@ impl Sandbox {
         let execution_cmd = commands::wasm_pack_build(channel, mode, BUILD_DIR_NAME);
 
         cmd.arg(&helpers::container_name_for_channel(channel))
-            .args(&execution_cmd);
+            .args(&execution_cmd)
+            .args(&["--", "--color=always"]);
 
         log::debug!("compile command: {:?}", cmd);
 
@@ -200,7 +201,7 @@ impl Sandbox {
 
         cmd.apply_edition(req);
 
-        cmd.arg("rustfmt").args(&["cargo", "fmt"]);
+        cmd.arg("rustfmt").args(commands::cargo_color()).arg("fmt");
 
         log::debug!("format command: {:?}", cmd);
 
@@ -212,7 +213,9 @@ impl Sandbox {
 
         cmd.apply_edition(&req);
 
-        cmd.arg("clippy").args(&["cargo", "clippy"]);
+        cmd.arg("clippy")
+            .args(commands::cargo_color())
+            .arg("clippy");
 
         log::debug!("clippy command: {:?}", cmd);
 
@@ -224,7 +227,8 @@ impl Sandbox {
         cmd.apply_edition(req);
 
         cmd.arg(helpers::container_name_for_channel(Channel::Nightly))
-            .args(&["cargo", "expand"]);
+            .args(commands::cargo_color())
+            .arg("expand");
 
         log::debug!("macro expand command: {:?}", cmd);
 

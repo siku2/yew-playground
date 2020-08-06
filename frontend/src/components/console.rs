@@ -1,8 +1,12 @@
+use super::ansi::Ansi;
 use crate::utils::NeqAssign;
 use yew::{html, Component, ComponentLink, Html, Properties, ShouldRender};
 
-#[derive(Clone, Debug, PartialEq, Properties)]
-pub struct ConsoleProps {}
+#[derive(Clone, Debug, Default, PartialEq, Properties)]
+pub struct ConsoleProps {
+    pub stderr: String,
+    pub stdout: String,
+}
 
 #[derive(Debug)]
 pub struct Console {
@@ -25,6 +29,12 @@ impl Component for Console {
     }
 
     fn view(&self) -> Html {
-        html! {}
+        let ConsoleProps { stderr, stdout } = &self.props;
+        html! {
+            <div class="console">
+                <Ansi text=stderr.clone() />
+                <Ansi text=stdout.clone() />
+            </div>
+        }
     }
 }

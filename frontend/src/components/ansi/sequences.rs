@@ -103,7 +103,9 @@ pub fn get_markers(mut s: &str) -> Vec<Marker> {
     let mut markers = Vec::new();
     while let Some(index) = s.find(Escape::ESC) {
         let (pre, post) = s.split_at(index);
-        markers.push(Marker::Text(pre));
+        if !pre.is_empty() {
+            markers.push(Marker::Text(pre));
+        }
 
         let mut cursor = CharCursor::new(post);
         if let Some(seq) = Escape::parse(&mut cursor) {
@@ -113,7 +115,10 @@ pub fn get_markers(mut s: &str) -> Vec<Marker> {
         s = cursor.remainder();
     }
 
-    markers.push(Marker::Text(s));
+    if !s.is_empty() {
+        markers.push(Marker::Text(s));
+    }
+
     markers
 }
 

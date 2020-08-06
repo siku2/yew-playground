@@ -1,6 +1,7 @@
 use crate::{
     components::{
         browser::{Browser, Controller as BrowserController},
+        console::{Console, ConsoleProps},
         editor::Editor,
     },
     services::api::{Session, SessionRef},
@@ -26,6 +27,7 @@ pub struct SandboxPage {
     link: ComponentLink<Self>,
     session: SessionRef,
     browser_controller: BrowserController,
+    console_props: ConsoleProps,
 }
 impl Component for SandboxPage {
     type Message = SandboxPageMsg;
@@ -38,15 +40,20 @@ impl Component for SandboxPage {
             link,
             session,
             browser_controller: BrowserController::default(),
+            console_props: ConsoleProps::default(),
         }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         use SandboxPageMsg::*;
         match msg {
-            Compiled(_resp) => {
+            Compiled(resp) => {
                 self.browser_controller.reload();
-                false
+                self.console_props = ConsoleProps {
+                    stderr: resp.stderr,
+                    stdout: resp.stdout,
+                };
+                true
             }
         }
     }
@@ -59,14 +66,17 @@ impl Component for SandboxPage {
         let Self {
             session,
             browser_controller,
+            console_props,
             ..
         } = self;
 
         let oncompile = self.link.callback(SandboxPageMsg::Compiled);
+        let console_props = console_props.clone();
 
         html! {
             <main>
                 <Editor session=Rc::clone(session) oncompile=oncompile />
+                <Console with console_props />
                 <Browser session=Rc::clone(session) controller=browser_controller />
             </main>
         }
