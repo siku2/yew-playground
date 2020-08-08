@@ -2,7 +2,7 @@ use crate::{
     services::{api::SessionRef, locale},
     utils::{ComponentRef, NeqAssign},
 };
-use web_sys::HtmlIFrameElement;
+use web_sys::{HtmlIFrameElement, Window};
 use yew::{html, Component, ComponentLink, Html, NodeRef, Properties, ShouldRender};
 
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -35,6 +35,17 @@ pub struct Browser {
     url: String,
     iframe_ref: NodeRef,
 }
+impl Browser {
+    fn iframe(&self) -> HtmlIFrameElement {
+        self.iframe_ref.cast().expect("failed to get iframe")
+    }
+
+    fn iframe_window(&self) -> Window {
+        self.iframe()
+            .content_window()
+            .expect("unable to get content window")
+    }
+}
 impl Component for Browser {
     type Message = BrowserMsg;
     type Properties = BrowserProps;
@@ -56,13 +67,7 @@ impl Component for Browser {
         use BrowserMsg::*;
         match msg {
             Reload => {
-                let iframe = self
-                    .iframe_ref
-                    .cast::<HtmlIFrameElement>()
-                    .expect("failed to get iframe");
-                iframe
-                    .content_window()
-                    .expect("unable to get content window")
+                self.iframe_window()
                     .location()
                     .reload()
                     .expect("unable to reload");
