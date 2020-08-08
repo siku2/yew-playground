@@ -56,6 +56,12 @@ impl ClassStyle {
     }
 
     fn push_style(&mut self, new_style: &str) {
+        if cfg!(debug_assertions) {
+            if let Some(style) = &self.style {
+                assert!(style.ends_with(';'), "existing style doesn't end in ';'");
+            }
+        }
+
         if let Some(style) = &mut self.style {
             style.push_str(new_style);
         } else {

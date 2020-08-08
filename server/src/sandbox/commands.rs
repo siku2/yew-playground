@@ -82,7 +82,7 @@ pub struct CrateInformation {
     pub id: String,
 }
 
-pub fn _list_crates() -> Result<Vec<CrateInformation>> {
+pub fn list_crates() -> Result<Vec<CrateInformation>> {
     let mut command = docker_run();
     command.args(&[helpers::container_name_for_channel(Channel::Stable)]);
     command.args(&["cat", "crate-information.json"]);
@@ -103,7 +103,7 @@ pub struct Version {
     pub commit_date: String,
 }
 
-pub fn _rustc_version(channel: Channel) -> Result<Version> {
+pub fn rustc_version(channel: Channel) -> Result<Version> {
     let mut command = docker_run();
     command.args(&[helpers::container_name_for_channel(channel)]);
     command.args(&["rustc", "--version", "--verbose"]);
@@ -138,13 +138,13 @@ pub fn _rustc_version(channel: Channel) -> Result<Version> {
     })
 }
 
-pub fn _version_rustfmt() -> Result<Version> {
+pub fn version_rustfmt() -> Result<Version> {
     let mut command = docker_run();
     command.args(&["rustfmt", "cargo", "fmt", "--version"]);
     cargo_tool_version(command)
 }
 
-pub fn _version_clippy() -> Result<Version> {
+pub fn version_clippy() -> Result<Version> {
     let mut command = docker_run();
     command.args(&["clippy", "cargo", "clippy", "--version"]);
     cargo_tool_version(command)
