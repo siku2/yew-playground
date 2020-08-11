@@ -1,5 +1,5 @@
 use crate::{
-    services::api::{Session, SessionRef},
+    services::{api::{Session, SessionRef}, locale},
     utils::NeqAssign,
 };
 use protocol::SandboxStructure;
@@ -69,6 +69,7 @@ impl Component for Explorer {
                 let onclick_file = &self.props.onclick_file;
                 html! {
                     <nav class="explorer">
+                        <span class="explorer__header">{ locale::get("explorer-header", None) }</span>
                         <Directory onclick_file=onclick_file.clone() start_open=true directory=Rc::clone(public) />
                         <Directory onclick_file=onclick_file.clone() start_open=true directory=Rc::clone(src) />
                     </nav>

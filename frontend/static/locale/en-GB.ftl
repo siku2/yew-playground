@@ -9,3 +9,5 @@ browser-reload = Reload
 browser-iframe-title = Playground Output
 
 editor-save = Save
+
+explorer-header = Explorer

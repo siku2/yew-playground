@@ -79,9 +79,9 @@ impl Component for Ansi {
     fn view(&self) -> Html {
         let part_comps = self.parts.iter().map(Self::view_part);
         html! {
-            <div class="ansi-container">
+            <pre class="ansi-container">
                 { for part_comps }
-            </div>
+            </pre>
         }
     }
 }
