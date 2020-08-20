@@ -15,6 +15,7 @@ anyhow = "1.0"
 fluent = "0.12"
 fluent-syntax = "0.9"
 log = "0.4"
+monaco = { git = "https://github.com/siku2/rust-monaco", features = ["yew-components"] }
 protocol = { path = "../protocol" }
 serde = "1.0"
 thiserror = "1.0"

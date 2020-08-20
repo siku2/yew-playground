@@ -6,6 +6,7 @@ use crate::{
     },
     utils::NeqAssign,
 };
+use monaco::{api::CodeEditorOptions, yew::CodeEditor};
 use protocol::CompileResponse;
 use std::{rc::Rc, slice};
 use yew::{
@@ -15,7 +16,6 @@ use yew::{
     Component,
     ComponentLink,
     Html,
-    InputData,
     Properties,
     ShouldRender,
 };
@@ -110,14 +110,17 @@ impl Editor {
             }
             Idle => {
                 let content = tab.content.clone().unwrap_or_default();
-                let tab_id = tab.id;
-                let oninput = self.link.callback(move |input: InputData| {
-                    EditorMsg::ChangeTabContent(tab_id, input.value)
-                });
+                // let tab_id = tab.id;
+                // let oninput = self.link.callback(move |input: InputData| {
+                //     EditorMsg::ChangeTabContent(tab_id, input.value)
+                // });
+                // TODO this is very much WIP
+                let options = CodeEditorOptions::default()
+                    .with_value(content)
+                    .with_language("rust".to_owned())
+                    .with_theme("vs-dark".to_owned());
                 html! {
-                    <textarea oninput=oninput>
-                        { content }
-                    </textarea>
+                    <CodeEditor options=Rc::new(options) height="100%" />
                 }
             }
         }
