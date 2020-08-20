@@ -7,6 +7,9 @@
   display: flex;
   min-height: 20em;
   width: 100%;
+
+  // TODO just for testing. REPLACE with dynamic size
+  height: 40em;
 }
 
 .editor-window {
@@ -17,6 +20,5 @@
 
   &__content {
     flex: 1;
-    overflow-y: scroll;
   }
 }

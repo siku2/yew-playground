@@ -6,7 +6,11 @@ use crate::{
     },
     utils::NeqAssign,
 };
-use monaco::{api::CodeEditorOptions, yew::CodeEditor};
+use monaco::{
+    api::{CodeEditorOptions, TextModel},
+    sys::Uri,
+    yew::CodeEditor,
+};
 use protocol::CompileResponse;
 use std::{rc::Rc, slice};
 use yew::{
@@ -27,7 +31,6 @@ pub enum EditorMsg {
     OpenFile(Rc<protocol::File>),
     FileResponse(TabIdentifier, anyhow::Result<String>),
     SelectTab(TabIdentifier),
-    ChangeTabContent(TabIdentifier, String),
     SaveTab(TabIdentifier),
     SaveResponse(TabIdentifier, anyhow::Result<()>),
 }
@@ -44,6 +47,7 @@ pub struct Editor {
     link: ComponentLink<Self>,
     tabs: Tabs,
     selected: Option<TabIdentifier>,
+    monaco_options: Rc<CodeEditorOptions>,
 }
 impl Editor {
     fn render_tab(&self, tab: &Tab) -> Html {
@@ -109,18 +113,14 @@ impl Editor {
                 }
             }
             Idle => {
-                let content = tab.content.clone().unwrap_or_default();
+                let model = tab.model.clone();
                 // let tab_id = tab.id;
                 // let oninput = self.link.callback(move |input: InputData| {
                 //     EditorMsg::ChangeTabContent(tab_id, input.value)
                 // });
                 // TODO this is very much WIP
-                let options = CodeEditorOptions::default()
-                    .with_value(content)
-                    .with_language("rust".to_owned())
-                    .with_theme("vs-dark".to_owned());
                 html! {
-                    <CodeEditor options=Rc::new(options) height="100%" />
+                    <CodeEditor options=Rc::clone(&self.monaco_options) model=model />
                 }
             }
         }
@@ -131,11 +131,13 @@ impl Component for Editor {
     type Properties = EditorProps;
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
+        let monaco_options = Rc::new(CodeEditorOptions::default().with_theme("vs-dark".to_owned()));
         Self {
             props,
             link,
             tabs: Tabs::new(),
             selected: None,
+            monaco_options,
         }
     }
 
@@ -161,14 +163,6 @@ impl Component for Editor {
             SelectTab(id) => {
                 self.selected = Some(id);
                 true
-            }
-            ChangeTabContent(id, content) => {
-                if let Some(tab) = self.tabs.get_mut(id) {
-                    tab.change_content(content);
-                    true
-                } else {
-                    false
-                }
             }
             SaveTab(id) => {
                 if let Some(tab) = self.tabs.get_mut(id) {
@@ -280,7 +274,7 @@ impl Tabs {
 struct Tab {
     id: TabIdentifier,
     file: Rc<protocol::File>,
-    content: Option<String>,
+    model: Option<TextModel>,
     state: ContentState,
     dirty: bool,
 }
@@ -295,7 +289,7 @@ impl Tab {
         Self {
             id,
             file,
-            content: None,
+            model: None,
             state,
             dirty: false,
         }
@@ -306,8 +300,8 @@ impl Tab {
             return false;
         }
 
-        if let Some(content) = &self.content {
-            self.state = ContentState::save(session, &self.file.path, content.clone(), callback);
+        if let Some(model) = &self.model {
+            self.state = ContentState::save(session, &self.file.path, model.get_value(), callback);
             true
         } else {
             false
@@ -323,7 +317,9 @@ impl Tab {
 
         match resp {
             Ok(content) => {
-                self.content.replace(content);
+                let uri = Uri::file(&self.file.path);
+                let model = TextModel::create(&content, Some("rust"), Some(&uri));
+                self.model = Some(model);
                 *state = ContentState::Idle;
             }
             Err(err) => {
@@ -349,14 +345,6 @@ impl Tab {
                 log::error!("error saving file: {}", err);
                 *state = ContentState::Failed(err);
             }
-        }
-    }
-
-    fn change_content(&mut self, content: String) {
-        // TODO dirty flag has race condition with save
-        let old_content = self.content.replace(content);
-        if old_content != self.content {
-            self.dirty = true;
         }
     }
 }
