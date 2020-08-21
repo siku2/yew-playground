@@ -318,7 +318,7 @@ impl Tab {
         match resp {
             Ok(content) => {
                 let uri = Uri::file(&self.file.path);
-                let model = TextModel::create(&content, Some("rust"), Some(&uri));
+                let model = TextModel::create(&content, None, Some(&uri));
                 self.model = Some(model);
                 *state = ContentState::Idle;
             }

@@ -1,5 +1,8 @@
 use crate::{
-    services::{api::{Session, SessionRef}, locale},
+    services::{
+        api::{Session, SessionRef},
+        locale,
+    },
     utils::NeqAssign,
 };
 use protocol::SandboxStructure;

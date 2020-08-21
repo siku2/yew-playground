@@ -69,9 +69,9 @@ impl Csi {
         match cursor.read()? {
             c @ '\u{0040}'..='\u{007e}' => {
                 let params = params.drain(..).map(|r| cursor.get(r).unwrap()).collect();
-                return Some((c, params));
+                Some((c, params))
             }
-            _ => return None,
+            _ => None,
         }
     }
 

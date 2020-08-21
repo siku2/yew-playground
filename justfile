@@ -86,6 +86,11 @@ watch-server:
         "protocol/src" "protocol/Cargo.toml" \
         "server/src" "server/Cargo.toml"
 
+# Format the code and run clippy
+chores:
+    cargo fmt
+    cargo clippy
+
 
 # HELPERS
 

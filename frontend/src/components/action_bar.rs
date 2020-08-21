@@ -85,11 +85,7 @@ enum ActionBarState {
 }
 impl ActionBarState {
     fn is_loading(&self) -> bool {
-        use ActionBarState::*;
-        match self {
-            Compiling(_) => true,
-            _ => false,
-        }
+        matches!(self, Self::Compiling(_))
     }
 
     fn compile(

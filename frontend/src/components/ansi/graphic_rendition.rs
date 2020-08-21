@@ -95,7 +95,7 @@ impl Sgr {
         }
 
         let (r, g, b) = (params.next()?, params.next()?, params.next()?);
-        let rgb = u32::try_from(r << 16 + g << 8 + b).ok()?;
+        let rgb = u32::try_from((r << 16) + (g << 8) + b).ok()?;
         if background {
             Some(Self::ColorBgRgb(rgb))
         } else {
