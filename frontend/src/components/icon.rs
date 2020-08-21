@@ -1,22 +1,60 @@
 use crate::utils::NeqAssign;
 use std::fmt::{self, Display, Formatter};
-use yew::{html, Component, ComponentLink, Html, Properties, ShouldRender};
+use yew::{html, Classes, Component, ComponentLink, Html, Properties, ShouldRender};
 
 #[derive(Clone, Debug, Eq, PartialEq, Properties)]
 pub struct MdiProps {
     pub icon: Icon,
+    #[prop_or_default]
+    pub size: Option<Size>,
+    #[prop_or_default]
+    pub color: Option<Color>,
+    #[prop_or(true)]
+    pub active: bool,
 }
 
 #[derive(Debug)]
 pub struct Mdi {
     props: MdiProps,
+    classes: Classes,
+}
+impl Mdi {
+    fn update_classes(&mut self) {
+        let MdiProps {
+            icon: _,
+            size,
+            color,
+            active,
+        } = &self.props;
+
+        let mut classes = Classes::from("material-icons");
+
+        if let Some(size) = size {
+            classes.push(size.to_value());
+        }
+
+        if let Some(color) = color {
+            classes.push(color.to_value());
+        }
+
+        if !active {
+            classes.push("md-inactive");
+        }
+
+        self.classes = classes;
+    }
 }
 impl Component for Mdi {
     type Message = ();
     type Properties = MdiProps;
 
     fn create(props: Self::Properties, _link: ComponentLink<Self>) -> Self {
-        Self { props }
+        let mut this = Self {
+            props,
+            classes: Classes::default(),
+        };
+        this.update_classes();
+        this
     }
 
     fn update(&mut self, _msg: Self::Message) -> ShouldRender {
@@ -24,18 +62,23 @@ impl Component for Mdi {
     }
 
     fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        self.props.neq_assign(props)
+        if self.props.neq_assign(props) {
+            self.update_classes();
+            true
+        } else {
+            false
+        }
     }
 
     fn view(&self) -> Html {
         let icon = self.props.icon;
         html! {
-            <i class="material-icons">{ icon }</i>
+            <i class=self.classes.clone()>{ icon }</i>
         }
     }
 }
 
-macro_rules! icon_enum {
+macro_rules! str_enum {
     (
         $(#[$meta:meta])*
         pub enum $ident:ident {
@@ -54,8 +97,8 @@ macro_rules! icon_enum {
             )*
         }
         impl $ident {
-            /// Get the font icon name.
-            pub fn icon_name(&self) -> &'static str {
+            /// Get the variant value
+            pub fn to_value(&self) -> &'static str {
                 match self {
                     $(
                         Self::$v_ident => $v_value,
@@ -65,13 +108,29 @@ macro_rules! icon_enum {
         }
         impl Display for $ident {
             fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-                f.write_str(self.icon_name())
+                f.write_str(self.to_value())
             }
         }
     };
 }
 
-icon_enum! {
+str_enum! {
+    pub enum Size {
+        Md18 = "md-18",
+        Md24 = "md-24",
+        Md36 = "md-36",
+        Md48 = "md-48",
+    }
+}
+
+str_enum! {
+    pub enum Color {
+        Dark = "md-dark",
+        Light = "md-light",
+    }
+}
+
+str_enum! {
     pub enum Icon {
         /// Chevron down.
         ChevronDown = "expand_more",
