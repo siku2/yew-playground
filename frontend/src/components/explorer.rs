@@ -1,3 +1,4 @@
+use super::icon::{Icon, Mdi};
 use crate::{
     services::{
         api::{Session, SessionRef},
@@ -207,17 +208,23 @@ impl Component for Directory {
     fn view(&self) -> Html {
         let directory = &self.props.directory;
 
-        let content = if self.open {
-            self.view_content()
+        let (content, icon);
+        if self.open {
+            content = self.view_content();
+            icon = Icon::ChevronDown;
         } else {
-            html! {}
+            content = html! {};
+            icon = Icon::ChevronRight;
         };
 
         let onclick_name = self.link.callback(|_| DirectoryMsg::ToggleOpen);
 
         html! {
             <div class="explorer-dir">
-                <span class="explorer-item__name" onclick=onclick_name>{ &directory.name }</span>
+                <span class="explorer-item__name" onclick=onclick_name>
+                    <Mdi icon=icon />
+                    { &directory.name }
+                </span>
                 { content }
             </div>
         }

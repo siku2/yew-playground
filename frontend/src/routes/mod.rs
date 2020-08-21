@@ -12,6 +12,8 @@ pub enum AppSwitch {
     Sandbox(String),
     #[to = "/"]
     Home,
+    #[rest]
+    NotFound(String),
 }
 
 #[derive(Clone, Debug)]
@@ -21,7 +23,8 @@ impl AppRouter {
         use AppSwitch::*;
 
         match switch {
-            Home => html! { <HomePage /> },
+            // TODO handle NotFound
+            Home | NotFound(_) => html! { <HomePage /> },
             Sandbox(id) => html! { <SandboxPage id=id /> },
         }
     }

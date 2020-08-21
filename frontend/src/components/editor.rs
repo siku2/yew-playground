@@ -101,6 +101,7 @@ impl Editor {
 
     fn view_tab_content(&self, tab: &Tab) -> Html {
         use ContentState::*;
+        // TODO dirty flag needs to be set again
         match &tab.state {
             Loading(_) => {
                 // TODO render loading state
