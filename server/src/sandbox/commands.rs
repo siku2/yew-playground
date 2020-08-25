@@ -5,7 +5,7 @@ use super::{
     Mode,
     Result,
 };
-use serde::Deserialize;
+use protocol::{ToolVersions, Version};
 use std::{
     collections::BTreeMap,
     process::{Command, Output},
@@ -75,35 +75,16 @@ pub fn set_execution_environment(cmd: &mut Command, req: impl EditionRequest + B
     cmd.apply_backtrace(&req);
 }
 
-#[derive(Clone, Debug, Deserialize)]
-pub struct CrateInformation {
-    pub name: String,
-    pub version: String,
-    pub id: String,
+pub fn get_tool_versions(channel: Channel) -> Result<ToolVersions> {
+    Ok(ToolVersions {
+        rustc: version_rustc(channel)?,
+        rustfmt: version_rustfmt()?,
+        clippy: version_clippy()?,
+        cargo_expand: version_cargo_expand()?,
+    })
 }
 
-pub fn list_crates() -> Result<Vec<CrateInformation>> {
-    let mut command = docker_run();
-    command.args(&[helpers::container_name_for_channel(Channel::Stable)]);
-    command.args(&["cat", "crate-information.json"]);
-    let output = run_with_timeout(command)?;
-
-    let crate_info: Vec<CrateInformation> =
-        serde_json::from_slice(&output.stdout).map_err(Error::UnableToParseCrateInformation)?;
-
-    let crates = crate_info.into_iter().map(Into::into).collect();
-
-    Ok(crates)
-}
-
-#[derive(Clone, Debug)]
-pub struct Version {
-    pub release: String,
-    pub commit_hash: String,
-    pub commit_date: String,
-}
-
-pub fn rustc_version(channel: Channel) -> Result<Version> {
+pub fn version_rustc(channel: Channel) -> Result<Version> {
     let mut command = docker_run();
     command.args(&[helpers::container_name_for_channel(channel)]);
     command.args(&["rustc", "--version", "--verbose"]);
@@ -147,6 +128,12 @@ pub fn version_rustfmt() -> Result<Version> {
 pub fn version_clippy() -> Result<Version> {
     let mut command = docker_run();
     command.args(&["clippy", "cargo", "clippy", "--version"]);
+    cargo_tool_version(command)
+}
+
+pub fn version_cargo_expand() -> Result<Version> {
+    let mut command = docker_run();
+    command.args(&["cargo-expand", "cargo", "expand", "--version"]);
     cargo_tool_version(command)
 }
 

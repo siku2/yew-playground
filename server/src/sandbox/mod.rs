@@ -13,6 +13,7 @@ use protocol::{
     MacroExpansionResponse,
     Mode,
     SandboxStructure,
+    ToolVersions,
 };
 use std::{
     borrow::Cow,
@@ -127,6 +128,11 @@ impl Sandbox {
             return Ok(public_path);
         }
         safe_join_path(&self.build_dir, path)
+    }
+
+    pub fn get_tool_versions(&self) -> Result<ToolVersions> {
+        // TODO use correct channel
+        commands::get_tool_versions(Channel::Stable)
     }
 
     pub fn compile(&self, req: &CompileRequest) -> Result<CompileResponse> {

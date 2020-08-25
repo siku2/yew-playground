@@ -1,7 +1,7 @@
 #![feature(decl_macro, hash_set_entry, never_type, proc_macro_hygiene)]
 
 use janitor::{Janitor, SessionRef};
-use protocol::{CompileRequest, CompileResponse, SandboxStructure, SessionDetails};
+use protocol::{CompileRequest, CompileResponse, SandboxStructure, SessionDetails, ToolVersions};
 use response::Content;
 use rocket::{
     http::{ContentType, Status},
@@ -48,7 +48,7 @@ impl<'r> Responder<'r> for Error {
 type Result<T> = std::result::Result<T, Error>;
 
 #[rocket::post("/sandbox")]
-fn api_sandbox_create(janitor: State<Janitor>) -> Result<Json<SessionDetails>> {
+fn api_create_sandbox(janitor: State<Janitor>) -> Result<Json<SessionDetails>> {
     // TODO configurable template
     let sandbox = Sandbox::create_from_template(Path::new("template"))?;
     let session = janitor.create_session(sandbox);
@@ -65,8 +65,21 @@ fn get_session(janitor: &Janitor, id: &UuidParam) -> Result<SessionRef> {
         .ok_or_else(|| Error::from(protocol::Error::SessionNotFound))
 }
 
-#[rocket::get("/files/<sandbox>")]
-fn api_sandbox_list_files(
+#[rocket::get("/<sandbox>/tools")]
+fn api_get_tool_versions(
+    janitor: State<Janitor>,
+    sandbox: UuidParam,
+) -> Result<Json<ToolVersions>> {
+    let session = get_session(&janitor, &sandbox)?;
+    session
+        .sandbox
+        .get_tool_versions()
+        .map(Json)
+        .map_err(Error::from)
+}
+
+#[rocket::get("/<sandbox>/files")]
+fn api_get_structure(
     janitor: State<Janitor>,
     sandbox: UuidParam,
 ) -> Result<Json<SandboxStructure>> {
@@ -75,8 +88,8 @@ fn api_sandbox_list_files(
     Ok(Json(structure))
 }
 
-#[rocket::get("/files/<sandbox>/<path..>")]
-fn api_sandbox_get_file(
+#[rocket::get("/<sandbox>/files/<path..>")]
+fn api_get_file(
     janitor: State<Janitor>,
     sandbox: UuidParam,
     path: PathBuf,
@@ -92,8 +105,8 @@ fn api_sandbox_get_file(
     Ok(Content(ContentType::Plain, file))
 }
 
-#[rocket::put("/files/<sandbox>/<path..>", data = "<code>")]
-fn api_sandbox_put_file(
+#[rocket::put("/<sandbox>/files/<path..>", data = "<code>")]
+fn api_upload_file(
     janitor: State<Janitor>,
     sandbox: UuidParam,
     path: PathBuf,
@@ -104,8 +117,8 @@ fn api_sandbox_put_file(
     Ok(())
 }
 
-#[rocket::post("/compile/<sandbox>", data = "<req>")]
-fn api_sandbox_compile(
+#[rocket::post("/<sandbox>/compile", data = "<req>")]
+fn api_compile(
     janitor: State<Janitor>,
     sandbox: UuidParam,
     req: Json<CompileRequest>,
@@ -148,11 +161,12 @@ fn main() {
         .mount(
             "/api",
             rocket::routes![
-                api_sandbox_create,
-                api_sandbox_list_files,
-                api_sandbox_get_file,
-                api_sandbox_put_file,
-                api_sandbox_compile,
+                api_create_sandbox,
+                api_get_tool_versions,
+                api_get_structure,
+                api_get_file,
+                api_upload_file,
+                api_compile,
             ],
         )
         .mount(

@@ -20,6 +20,21 @@ pub struct SandboxStructure {
     pub src: Directory,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct Version {
+    pub release: String,
+    pub commit_hash: String,
+    pub commit_date: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct ToolVersions {
+    pub rustc: Version,
+    pub rustfmt: Version,
+    pub clippy: Version,
+    pub cargo_expand: Version,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub enum Channel {
     Stable,
