@@ -46,7 +46,7 @@ impl Session {
         &self,
         callback: Callback<anyhow::Result<SandboxStructure>>,
     ) -> anyhow::Result<FetchTask> {
-        let req = Request::get(make_api_uri(format!("/files/{}", self.id)))
+        let req = Request::get(make_api_uri(format!("/{}/files", self.id)))
             .body(Nothing)
             .unwrap();
 
@@ -58,7 +58,7 @@ impl Session {
         path: &str,
         callback: Callback<anyhow::Result<String>>,
     ) -> anyhow::Result<FetchTask> {
-        let req = Request::get(make_api_uri(format!("/files/{}/{}", self.id, path)))
+        let req = Request::get(make_api_uri(format!("/{}/files/{}", self.id, path)))
             .body(Nothing)
             .unwrap();
 
@@ -71,13 +71,13 @@ impl Session {
         )
     }
 
-    pub fn put_file(
+    pub fn upload_file(
         &self,
         path: &str,
         content: String,
         callback: Callback<anyhow::Result<()>>,
     ) -> anyhow::Result<FetchTask> {
-        let req = Request::put(make_api_uri(format!("/files/{}/{}", self.id, path)))
+        let req = Request::put(make_api_uri(format!("/{}/files/{}", self.id, path)))
             .body(Ok(content))
             .unwrap();
 
@@ -101,7 +101,7 @@ impl Session {
             backtrace: false,
         };
 
-        post_json(format!("/compile/{}", self.id), &body, callback)
+        post_json(format!("/{}/compile", self.id), &body, callback)
     }
 }
 

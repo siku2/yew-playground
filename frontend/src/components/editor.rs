@@ -374,7 +374,7 @@ impl ContentState {
     ) -> Self {
         Self::Loading(
             session
-                .put_file(path, content, callback)
+                .upload_file(path, content, callback)
                 .expect("failed to create save request"),
         )
     }
