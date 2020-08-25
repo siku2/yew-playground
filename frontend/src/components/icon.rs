@@ -132,13 +132,9 @@ str_enum! {
 
 str_enum! {
     pub enum Icon {
-        /// Chevron down.
         ChevronDown = "expand_more",
-        /// Chevron right.
         ChevronRight = "chevron_right",
-        /// Circle Medium.
         CircleMedium = "circle_medium",
-        /// Close.
         Close = "close",
     }
 }

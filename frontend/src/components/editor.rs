@@ -8,7 +8,7 @@ use crate::{
 };
 use monaco::{
     api::{CodeEditorOptions, TextModel},
-    sys::Uri,
+    sys::{editor::BuiltinTheme, Uri},
     yew::CodeEditor,
 };
 use protocol::CompileResponse;
@@ -132,7 +132,8 @@ impl Component for Editor {
     type Properties = EditorProps;
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
-        let monaco_options = Rc::new(CodeEditorOptions::default().with_theme("vs-dark".to_owned()));
+        let monaco_options =
+            Rc::new(CodeEditorOptions::default().with_builtin_theme(BuiltinTheme::VsDark));
         Self {
             props,
             link,
