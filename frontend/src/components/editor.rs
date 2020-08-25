@@ -1,4 +1,7 @@
-use super::{action_bar::ActionBar, explorer::Explorer};
+use super::{
+    action_bar::{ActionBar, ActionBarCallbacks},
+    explorer::Explorer,
+};
 use crate::{
     services::{
         api::{Session, SessionRef},
@@ -11,7 +14,6 @@ use monaco::{
     sys::{editor::BuiltinTheme, Uri},
     yew::CodeEditor,
 };
-use protocol::CompileResponse;
 use std::{rc::Rc, slice};
 use yew::{
     html,
@@ -38,7 +40,7 @@ pub enum EditorMsg {
 #[derive(Clone, Debug, PartialEq, Properties)]
 pub struct EditorProps {
     pub session: SessionRef,
-    pub oncompile: Callback<CompileResponse>,
+    pub action_bar_callbacks: ActionBarCallbacks,
 }
 
 #[derive(Debug)]
@@ -199,14 +201,16 @@ impl Component for Editor {
 
     fn view(&self) -> Html {
         let EditorProps {
-            session, oncompile, ..
+            session,
+            action_bar_callbacks,
+            ..
         } = &self.props;
         let onclick_file = self.link.callback(EditorMsg::OpenFile);
         html! {
             <div class="editor">
                 <Explorer session=Rc::clone(session) onclick_file=onclick_file />
                 { self.view_editor_window() }
-                <ActionBar session=Rc::clone(session) oncompile=oncompile.clone() />
+                <ActionBar session=Rc::clone(session) callbacks=action_bar_callbacks.clone() />
             </div>
         }
     }

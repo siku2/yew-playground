@@ -1,19 +1,27 @@
 use crate::{
     components::{
+        action_bar::ActionBarCallbacks,
         browser::{Browser, Controller as BrowserController},
         console::{Console, ConsoleProps},
         editor::Editor,
     },
-    services::api::{Session, SessionRef},
+    services::api::{
+        ClippyResponse,
+        CompileResponse,
+        FormatResponse,
+        MacroExpandResponse,
+        Session,
+        SessionRef,
+    },
     utils::NeqAssign,
 };
-use protocol::CompileResponse;
 use std::rc::Rc;
 use yew::{html, Component, ComponentLink, Html, Properties, ShouldRender};
 
 #[derive(Debug)]
 pub enum SandboxPageMsg {
-    Compiled(CompileResponse),
+    ReloadBrowser,
+    DisplayOutput { stdout: String, stderr: String },
 }
 
 #[derive(Clone, Debug, PartialEq, Properties)]
@@ -28,12 +36,15 @@ pub struct SandboxPage {
     session: SessionRef,
     browser_controller: BrowserController,
     console_props: ConsoleProps,
+    action_bar_callbacks: ActionBarCallbacks,
 }
 impl Component for SandboxPage {
     type Message = SandboxPageMsg;
     type Properties = SandboxPageProps;
 
     fn create(props: Self::Properties, link: ComponentLink<Self>) -> Self {
+        let action_bar_callbacks = build_action_bar_callbacks(&link);
+
         let session = Rc::new(Session::new(props.id.clone()));
         Self {
             props,
@@ -41,18 +52,19 @@ impl Component for SandboxPage {
             session,
             browser_controller: BrowserController::default(),
             console_props: ConsoleProps::default(),
+            action_bar_callbacks,
         }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         use SandboxPageMsg::*;
         match msg {
-            Compiled(resp) => {
+            ReloadBrowser => {
                 self.browser_controller.reload();
-                self.console_props = ConsoleProps {
-                    stderr: resp.stderr,
-                    stdout: resp.stdout,
-                };
+                false
+            }
+            DisplayOutput { stdout, stderr } => {
+                self.console_props = ConsoleProps { stderr, stdout };
                 true
             }
         }
@@ -67,18 +79,46 @@ impl Component for SandboxPage {
             session,
             browser_controller,
             console_props,
+            action_bar_callbacks,
             ..
         } = self;
 
-        let oncompile = self.link.callback(SandboxPageMsg::Compiled);
         let console_props = console_props.clone();
 
         html! {
             <main>
-                <Editor session=Rc::clone(session) oncompile=oncompile />
+                <Editor session=Rc::clone(session) action_bar_callbacks=action_bar_callbacks.clone() />
                 <Console with console_props />
                 <Browser session=Rc::clone(session) controller=browser_controller />
             </main>
         }
+    }
+}
+
+fn build_action_bar_callbacks(link: &ComponentLink<SandboxPage>) -> ActionBarCallbacks {
+    use SandboxPageMsg::*;
+    ActionBarCallbacks {
+        compile: link.batch_callback(|res: CompileResponse| {
+            vec![
+                ReloadBrowser,
+                DisplayOutput {
+                    stdout: res.stdout,
+                    stderr: res.stderr,
+                },
+            ]
+        }),
+        format: link.callback(|res: FormatResponse| DisplayOutput {
+            stdout: res.stdout,
+            stderr: res.stderr,
+        }),
+        clippy: link.callback(|res: ClippyResponse| DisplayOutput {
+            stdout: res.stdout,
+            stderr: res.stderr,
+        }),
+        // TODO display the result in a new tab instead of the console
+        macro_expand: link.callback(|res: MacroExpandResponse| DisplayOutput {
+            stdout: res.stdout,
+            stderr: res.stderr,
+        }),
     }
 }

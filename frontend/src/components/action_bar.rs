@@ -1,6 +1,13 @@
 use crate::{
     services::{
-        api::{CompileResponse, Session, SessionRef},
+        api::{
+            ClippyResponse,
+            CompileResponse,
+            FormatResponse,
+            MacroExpandResponse,
+            Session,
+            SessionRef,
+        },
         locale,
     },
     utils::NeqAssign,
@@ -20,12 +27,26 @@ use yew::{
 pub enum ActionBarMsg {
     Compile,
     CompileResponse(anyhow::Result<CompileResponse>),
+    Format,
+    FormatResponse(anyhow::Result<FormatResponse>),
+    Clippy,
+    ClippyResponse(anyhow::Result<ClippyResponse>),
+    MacroExpand,
+    MacroExpandResponse(anyhow::Result<MacroExpandResponse>),
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ActionBarCallbacks {
+    pub compile: Callback<CompileResponse>,
+    pub format: Callback<FormatResponse>,
+    pub clippy: Callback<ClippyResponse>,
+    pub macro_expand: Callback<MacroExpandResponse>,
 }
 
 #[derive(Clone, Debug, PartialEq, Properties)]
 pub struct ActionBarProps {
     pub session: SessionRef,
-    pub oncompile: Callback<CompileResponse>,
+    pub callbacks: ActionBarCallbacks,
 }
 
 #[derive(Debug)]
@@ -47,17 +68,43 @@ impl Component for ActionBar {
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
+        let Self {
+            props: ActionBarProps { session, callbacks },
+            link,
+            state,
+        } = self;
+
         use ActionBarMsg::*;
         match msg {
-            Compile => self.state.compile(
-                &self.props.session,
-                self.link.callback(ActionBarMsg::CompileResponse),
-            ),
+            Compile => state.compile(&session, link.callback(ActionBarMsg::CompileResponse)),
             CompileResponse(resp) => {
-                if let Some(resp) = self.state.handle_compile_response(resp) {
-                    self.props.oncompile.emit(resp);
+                if let Some(resp) = state.handle_response(resp) {
+                    callbacks.compile.emit(resp);
                 }
 
+                true
+            }
+            Format => state.format(&session, link.callback(ActionBarMsg::FormatResponse)),
+            FormatResponse(resp) => {
+                if let Some(resp) = state.handle_response(resp) {
+                    callbacks.format.emit(resp);
+                }
+                true
+            }
+            Clippy => state.clippy(&session, link.callback(ActionBarMsg::ClippyResponse)),
+            ClippyResponse(resp) => {
+                if let Some(resp) = state.handle_response(resp) {
+                    callbacks.clippy.emit(resp);
+                }
+                true
+            }
+            MacroExpand => {
+                state.macro_expand(&session, link.callback(ActionBarMsg::MacroExpandResponse))
+            }
+            MacroExpandResponse(resp) => {
+                if let Some(resp) = state.handle_response(resp) {
+                    callbacks.macro_expand.emit(resp);
+                }
                 true
             }
         }
@@ -68,10 +115,21 @@ impl Component for ActionBar {
     }
 
     fn view(&self) -> Html {
-        let onclick_compile = self.link.callback(|_| ActionBarMsg::Compile);
+        let link = &self.link;
         html! {
-            <div class="action-bar">
-                <button onclick=onclick_compile>{ locale::get("action_bar-compile", None) }</button>
+            <div>
+                <button onclick=link.callback(|_| ActionBarMsg::Compile)>
+                    { locale::get("action_bar-compile", None) }
+                </button>
+                <button onclick=link.callback(|_| ActionBarMsg::Format)>
+                    { locale::get("action_bar-format", None) }
+                </button>
+                <button onclick=link.callback(|_| ActionBarMsg::Clippy)>
+                    { locale::get("action_bar-clippy", None) }
+                </button>
+                <button onclick=link.callback(|_| ActionBarMsg::MacroExpand)>
+                    { locale::get("action_bar-macro_expand", None) }
+                </button>
             </div>
         }
     }
@@ -80,12 +138,12 @@ impl Component for ActionBar {
 #[derive(Debug)]
 enum ActionBarState {
     Idle,
-    Compiling(FetchTask),
+    Waiting(FetchTask),
     Error(anyhow::Error),
 }
 impl ActionBarState {
     fn is_loading(&self) -> bool {
-        matches!(self, Self::Compiling(_))
+        matches!(self, Self::Waiting(_))
     }
 
     fn compile(
@@ -96,8 +154,7 @@ impl ActionBarState {
         if self.is_loading() {
             return false;
         }
-
-        *self = Self::Compiling(
+        *self = Self::Waiting(
             session
                 .compile(callback)
                 .expect("failed to create compile request"),
@@ -105,14 +162,59 @@ impl ActionBarState {
         true
     }
 
-    fn handle_compile_response(
+    fn format(
         &mut self,
-        resp: anyhow::Result<CompileResponse>,
-    ) -> Option<CompileResponse> {
+        session: &Session,
+        callback: Callback<anyhow::Result<FormatResponse>>,
+    ) -> bool {
+        if self.is_loading() {
+            return false;
+        }
+        *self = Self::Waiting(
+            session
+                .format(callback)
+                .expect("failed to create format request"),
+        );
+        true
+    }
+
+    fn clippy(
+        &mut self,
+        session: &Session,
+        callback: Callback<anyhow::Result<ClippyResponse>>,
+    ) -> bool {
+        if self.is_loading() {
+            return false;
+        }
+        *self = Self::Waiting(
+            session
+                .clippy(callback)
+                .expect("failed to create clippy request"),
+        );
+        true
+    }
+
+    fn macro_expand(
+        &mut self,
+        session: &Session,
+        callback: Callback<anyhow::Result<MacroExpandResponse>>,
+    ) -> bool {
+        if self.is_loading() {
+            return false;
+        }
+        *self = Self::Waiting(
+            session
+                .macro_expand(callback)
+                .expect("failed to create macro-expand request"),
+        );
+        true
+    }
+
+    fn handle_response<T>(&mut self, resp: anyhow::Result<T>) -> Option<T> {
         match resp {
-            Ok(resp) => {
+            Ok(res) => {
                 *self = Self::Idle;
-                Some(resp)
+                Some(res)
             }
             Err(err) => {
                 *self = Self::Error(err);

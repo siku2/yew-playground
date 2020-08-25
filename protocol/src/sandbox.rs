@@ -95,13 +95,13 @@ pub struct ClippyResponse {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct MacroExpansionRequest {
+pub struct MacroExpandRequest {
     #[serde(default)]
     pub edition: Option<Edition>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct MacroExpansionResponse {
+pub struct MacroExpandResponse {
     pub success: bool,
     pub stdout: String,
     pub stderr: String,

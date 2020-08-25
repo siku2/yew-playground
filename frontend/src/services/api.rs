@@ -1,12 +1,15 @@
 pub use protocol::{
     Channel,
-    CompileRequest,
+    ClippyResponse,
     CompileResponse,
     Edition,
+    FormatResponse,
+    MacroExpandResponse,
     Mode,
     SandboxStructure,
     SessionDetails,
 };
+use protocol::{ClippyRequest, CompileRequest, FormatRequest, MacroExpandRequest};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, rc::Rc};
 use yew::{
@@ -94,6 +97,7 @@ impl Session {
         &self,
         callback: Callback<anyhow::Result<CompileResponse>>,
     ) -> anyhow::Result<FetchTask> {
+        // TODO have these settings be stored on the server
         let body = CompileRequest {
             channel: Channel::Stable,
             mode: Mode::Debug,
@@ -102,6 +106,33 @@ impl Session {
         };
 
         post_json(format!("/{}/compile", self.id), &body, callback)
+    }
+
+    pub fn format(
+        &self,
+        callback: Callback<anyhow::Result<FormatResponse>>,
+    ) -> anyhow::Result<FetchTask> {
+        let body = FormatRequest { edition: None };
+
+        post_json(format!("/{}/format", self.id), &body, callback)
+    }
+
+    pub fn clippy(
+        &self,
+        callback: Callback<anyhow::Result<ClippyResponse>>,
+    ) -> anyhow::Result<FetchTask> {
+        let body = ClippyRequest { edition: None };
+
+        post_json(format!("/{}/clippy", self.id), &body, callback)
+    }
+
+    pub fn macro_expand(
+        &self,
+        callback: Callback<anyhow::Result<MacroExpandResponse>>,
+    ) -> anyhow::Result<FetchTask> {
+        let body = MacroExpandRequest { edition: None };
+
+        post_json(format!("/{}/macro-expand", self.id), &body, callback)
     }
 }
 

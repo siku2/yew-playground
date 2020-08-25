@@ -9,8 +9,8 @@ use protocol::{
     CompileResponse,
     FormatRequest,
     FormatResponse,
-    MacroExpansionRequest,
-    MacroExpansionResponse,
+    MacroExpandRequest,
+    MacroExpandResponse,
     Mode,
     SandboxStructure,
     ToolVersions,
@@ -171,11 +171,11 @@ impl Sandbox {
         })
     }
 
-    pub fn macro_expand(&self, req: &MacroExpansionRequest) -> Result<MacroExpansionResponse> {
+    pub fn macro_expand(&self, req: &MacroExpandRequest) -> Result<MacroExpandResponse> {
         let command = self.macro_expand_command(req);
         let output = commands::run_with_timeout(command)?;
 
-        Ok(MacroExpansionResponse {
+        Ok(MacroExpandResponse {
             success: output.status.success(),
             stdout: helpers::string_from_utf8_vec(output.stdout)?,
             stderr: helpers::string_from_utf8_vec(output.stderr)?,
@@ -216,7 +216,6 @@ impl Sandbox {
 
     fn clippy_command(&self, req: impl EditionRequest) -> Command {
         let mut cmd = self.docker_command();
-
         cmd.apply_edition(&req);
 
         cmd.arg("clippy")
@@ -232,7 +231,7 @@ impl Sandbox {
         let mut cmd = self.docker_command();
         cmd.apply_edition(req);
 
-        cmd.arg(helpers::container_name_for_channel(Channel::Nightly))
+        cmd.arg("cargo-expand")
             .args(commands::cargo_color())
             .arg("expand");
 

@@ -5,7 +5,7 @@ use protocol::{
     CompileRequest,
     Edition,
     FormatRequest,
-    MacroExpansionRequest,
+    MacroExpandRequest,
 };
 
 pub fn string_from_utf8_vec(v: Vec<u8>) -> Result<String> {
@@ -70,7 +70,7 @@ impl EditionRequest for ClippyRequest {
     }
 }
 
-impl EditionRequest for MacroExpansionRequest {
+impl EditionRequest for MacroExpandRequest {
     fn edition(&self) -> Option<Edition> {
         self.edition
     }

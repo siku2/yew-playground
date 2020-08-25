@@ -1,7 +1,19 @@
 #![feature(decl_macro, hash_set_entry, never_type, proc_macro_hygiene)]
 
 use janitor::{Janitor, SessionRef};
-use protocol::{CompileRequest, CompileResponse, SandboxStructure, SessionDetails, ToolVersions};
+use protocol::{
+    ClippyRequest,
+    ClippyResponse,
+    CompileRequest,
+    CompileResponse,
+    FormatRequest,
+    FormatResponse,
+    MacroExpandRequest,
+    MacroExpandResponse,
+    SandboxStructure,
+    SessionDetails,
+    ToolVersions,
+};
 use response::Content;
 use rocket::{
     http::{ContentType, Status},
@@ -65,17 +77,25 @@ fn get_session(janitor: &Janitor, id: &UuidParam) -> Result<SessionRef> {
         .ok_or_else(|| Error::from(protocol::Error::SessionNotFound))
 }
 
+fn with_session_wrap_result<R, E>(
+    janitor: &Janitor,
+    id: &UuidParam,
+    f: impl FnOnce(SessionRef) -> std::result::Result<R, E>,
+) -> Result<Json<R>>
+where
+    E: Into<Error>,
+{
+    f(get_session(janitor, id)?).map(Json).map_err(Into::into)
+}
+
 #[rocket::get("/<sandbox>/tools")]
 fn api_get_tool_versions(
     janitor: State<Janitor>,
     sandbox: UuidParam,
 ) -> Result<Json<ToolVersions>> {
-    let session = get_session(&janitor, &sandbox)?;
-    session
-        .sandbox
-        .get_tool_versions()
-        .map(Json)
-        .map_err(Error::from)
+    with_session_wrap_result(&janitor, &sandbox, |session| {
+        session.sandbox.get_tool_versions()
+    })
 }
 
 #[rocket::get("/<sandbox>/files")]
@@ -123,12 +143,33 @@ fn api_compile(
     sandbox: UuidParam,
     req: Json<CompileRequest>,
 ) -> Result<Json<CompileResponse>> {
-    let session = get_session(&janitor, &sandbox)?;
-    session
-        .sandbox
-        .compile(&*req)
-        .map(Json)
-        .map_err(Error::from)
+    with_session_wrap_result(&janitor, &sandbox, |session| session.sandbox.compile(&*req))
+}
+#[rocket::post("/<sandbox>/format", data = "<req>")]
+fn api_format(
+    janitor: State<Janitor>,
+    sandbox: UuidParam,
+    req: Json<FormatRequest>,
+) -> Result<Json<FormatResponse>> {
+    with_session_wrap_result(&janitor, &sandbox, |session| session.sandbox.format(&*req))
+}
+#[rocket::post("/<sandbox>/clippy", data = "<req>")]
+fn api_clippy(
+    janitor: State<Janitor>,
+    sandbox: UuidParam,
+    req: Json<ClippyRequest>,
+) -> Result<Json<ClippyResponse>> {
+    with_session_wrap_result(&janitor, &sandbox, |session| session.sandbox.clippy(&*req))
+}
+#[rocket::post("/<sandbox>/macro-expand", data = "<req>")]
+fn api_macro_expand(
+    janitor: State<Janitor>,
+    sandbox: UuidParam,
+    req: Json<MacroExpandRequest>,
+) -> Result<Json<MacroExpandResponse>> {
+    with_session_wrap_result(&janitor, &sandbox, |session| {
+        session.sandbox.macro_expand(&*req)
+    })
 }
 
 #[rocket::get("/<sandbox>")]
@@ -167,6 +208,9 @@ fn main() {
                 api_get_file,
                 api_upload_file,
                 api_compile,
+                api_format,
+                api_clippy,
+                api_macro_expand,
             ],
         )
         .mount(
