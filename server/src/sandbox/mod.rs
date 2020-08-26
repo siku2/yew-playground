@@ -194,8 +194,7 @@ impl Sandbox {
         let execution_cmd = commands::wasm_pack_build(channel, mode, BUILD_DIR_NAME);
 
         cmd.arg(&helpers::container_name_for_channel(channel))
-            .args(&execution_cmd)
-            .args(&["--", "--color=always"]);
+            .args(&execution_cmd);
 
         log::debug!("compile command: {:?}", cmd);
 
@@ -207,7 +206,7 @@ impl Sandbox {
 
         cmd.apply_edition(req);
 
-        cmd.arg("rustfmt").args(commands::cargo_color()).arg("fmt");
+        cmd.arg("rustfmt").arg("cargo").arg("fmt");
 
         log::debug!("format command: {:?}", cmd);
 
@@ -218,9 +217,7 @@ impl Sandbox {
         let mut cmd = self.docker_command();
         cmd.apply_edition(&req);
 
-        cmd.arg("clippy")
-            .args(commands::cargo_color())
-            .arg("clippy");
+        cmd.arg("clippy").arg("cargo").arg("clippy");
 
         log::debug!("clippy command: {:?}", cmd);
 
@@ -231,9 +228,7 @@ impl Sandbox {
         let mut cmd = self.docker_command();
         cmd.apply_edition(req);
 
-        cmd.arg("cargo-expand")
-            .args(commands::cargo_color())
-            .arg("expand");
+        cmd.arg("cargo-expand").arg("cargo").arg("expand");
 
         log::debug!("macro expand command: {:?}", cmd);
 
@@ -264,14 +259,13 @@ impl Sandbox {
 /// The result is a path relative to `base` and only containing normal
 /// components.
 fn safe_join_path(base: &Path, rel: &Path) -> Result<PathBuf> {
-    let has_invalid_comp = rel.components().any(|comp| match comp {
-        Component::Normal(_) => false,
-        _ => true,
-    });
-    if has_invalid_comp {
-        Err(Error::InvalidPath(rel.to_owned()))
-    } else {
+    let only_valid_comps = rel
+        .components()
+        .all(|comp| matches!(comp, Component::Normal(_)));
+    if only_valid_comps {
         Ok(base.join(rel))
+    } else {
+        Err(Error::InvalidPath(rel.to_owned()))
     }
 }
 

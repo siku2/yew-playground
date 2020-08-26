@@ -44,6 +44,7 @@ pub fn docker_run() -> Command {
     let mut cmd = Command::new("docker");
     cmd.arg("run")
         .arg("--rm")
+        .arg("--tty")
         .arg("--cap-drop=ALL")
         // Needed to allow overwriting the file
         .arg("--cap-add=DAC_OVERRIDE")
@@ -152,10 +153,6 @@ fn cargo_tool_version(command: Command) -> Result<Version> {
         commit_hash,
         commit_date,
     })
-}
-
-pub fn cargo_color() -> Vec<&'static str> {
-    vec!["cargo", "--color=always"]
 }
 
 pub fn wasm_pack_build(_channel: Channel, mode: Mode, out_dir: &'static str) -> Vec<&'static str> {
