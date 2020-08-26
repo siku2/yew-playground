@@ -89,17 +89,66 @@ pub enum Sgr {
     ResetColorBg,
 }
 impl Sgr {
-    fn color_rgb(mut params: impl Iterator<Item = usize>, background: bool) -> Option<Self> {
-        if params.next() != Some(2) {
-            return None;
-        }
+    fn from_color_code(code: usize, background: bool, bright: bool) -> Option<Self> {
+        use Sgr::*;
+        let color = ColorName::from_code(code)?;
+        let sgr = match (background, bright) {
+            (false, false) => ColorFgName(color),
+            (false, true) => ColorFgNameBright(color),
+            (true, false) => ColorBgName(color),
+            (true, true) => ColorBgNameBright(color),
+        };
+        Some(sgr)
+    }
 
-        let (r, g, b) = (params.next()?, params.next()?, params.next()?);
+    fn from_rgb(r: usize, g: usize, b: usize, background: bool) -> Option<Self> {
         let rgb = u32::try_from((r << 16) + (g << 8) + b).ok()?;
-        if background {
-            Some(Self::ColorBgRgb(rgb))
+        let sgr = if background {
+            Self::ColorBgRgb(rgb)
         } else {
-            Some(Self::ColorFgRgb(rgb))
+            Self::ColorFgRgb(rgb)
+        };
+        Some(sgr)
+    }
+
+    fn color_rgb(mut params: impl Iterator<Item = usize>, background: bool) -> Option<Self> {
+        match params.next()? {
+            2 => {
+                let (r, g, b) = (params.next()?, params.next()?, params.next()?);
+                Self::from_rgb(r, g, b, background)
+            }
+            5 => {
+                let n = params.next()?;
+                match n {
+                    0..=7 => Self::from_color_code(n, background, false),
+                    8..=15 => Self::from_color_code(n - 8, background, true),
+                    16..=231 => {
+                        // palette represents a 6 * 6 * 6 cube where the three
+                        // dimensions represent r, g, and b.
+                        // Comments here assume a 2D representation of the cube.
+                        // See: https://en.wikipedia.org/wiki/ANSI_escape_code#8-bit
+                        const ROWS: usize = 6;
+                        const COLUMNS: usize = 36;
+                        const STEP_SIZE: usize = 0xFF / 6;
+
+                        let n = n - 16;
+                        // increases with each row
+                        let r = (n / COLUMNS) * STEP_SIZE;
+                        // g is constant for each 6 * 6 block
+                        let g = ((n % COLUMNS) / ROWS) * STEP_SIZE;
+                        // increases with each column but resets every 6.
+                        let b = (n % ROWS) * STEP_SIZE;
+                        Self::from_rgb(r, g, b, background)
+                    }
+                    232..=255 => {
+                        const STEP_SIZE: usize = 0xFF / 24;
+                        let n = n - 232;
+                        Self::from_rgb(n * STEP_SIZE, n * STEP_SIZE, n * STEP_SIZE, background)
+                    }
+                    _ => None,
+                }
+            }
+            _ => None,
         }
     }
 
