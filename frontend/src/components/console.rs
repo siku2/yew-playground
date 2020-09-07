@@ -1,6 +1,6 @@
-use super::ansi::Ansi;
 use crate::utils::NeqAssign;
 use yew::{html, Component, ComponentLink, Html, Properties, ShouldRender};
+use yew_ansi::Ansi;
 
 #[derive(Clone, Debug, Default, PartialEq, Properties)]
 pub struct ConsoleProps {
