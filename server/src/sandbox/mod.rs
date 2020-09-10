@@ -115,7 +115,7 @@ impl Sandbox {
         if path.starts_with(&self.public_dir) || path.starts_with(&self.src_dir) {
             Ok(path)
         } else {
-            Err(Error::InvalidPath(path.to_path_buf()))
+            Err(Error::InvalidPath(path))
         }
     }
 
