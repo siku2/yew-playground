@@ -11,5 +11,6 @@ browser-reload = Reload
 browser-iframe-title = Playground Output
 
 editor-save = Save
+editor-tab-close = Close
 
 explorer-header = Explorer

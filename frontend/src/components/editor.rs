@@ -1,6 +1,7 @@
 use super::{
     action_bar::{ActionBar, ActionBarCallbacks},
     explorer::Explorer,
+    icon::{Icon, MdiButton, MdiProps},
 };
 use crate::{
     services::{
@@ -33,6 +34,7 @@ pub enum EditorMsg {
     OpenFile(Rc<protocol::File>),
     FileResponse(TabIdentifier, anyhow::Result<String>),
     SelectTab(TabIdentifier),
+    CloseTab(TabIdentifier),
     SaveTab(TabIdentifier),
     SaveResponse(TabIdentifier, anyhow::Result<()>),
 }
@@ -63,6 +65,7 @@ impl Editor {
 
         let tab_id = tab.id;
         let onclick_tab = self.link.callback(move |_| EditorMsg::SelectTab(tab_id));
+        // TODO remove save button
         let onclick_save = self.link.callback(move |_| EditorMsg::SaveTab(tab_id));
 
         html! {
@@ -71,17 +74,20 @@ impl Editor {
                 <button onclick=onclick_save>
                     { locale::get("editor-save", None) }
                 </button>
+                <MdiButton
+                    icon=MdiProps::new(Icon::Close)
+                    aria_label=locale::get("editor-tab-close", None)
+                    onclick=self.link.callback(move |_| EditorMsg::CloseTab(tab_id))
+                />
             </div>
         }
     }
 
     fn view_editor_window(&self) -> Html {
-        let tab_comps = self.tabs.iter().map(|tab| self.render_tab(tab));
-
         html! {
             <div class="editor-window">
                 <nav class="htbar htbar--scroll" role="tablist">
-                    { for tab_comps }
+                    { for self.tabs.iter().map(|tab| self.render_tab(tab)) }
                 </nav>
                 <div class="editor-window__content">
                     { self.view_content() }
@@ -168,6 +174,16 @@ impl Component for Editor {
                 self.selected = Some(id);
                 true
             }
+            CloseTab(id) => {
+                // TODO handle dirty tab
+                if self.selected == Some(id) {
+                    let (left, right) = self.tabs.surrounding_tabs(id);
+                    self.selected = right.or(left).map(|tab| tab.id);
+                }
+
+                self.tabs.remove(id);
+                true
+            }
             SaveTab(id) => {
                 if let Some(tab) = self.tabs.get_mut(id) {
                     let ok = tab.save(
@@ -237,6 +253,21 @@ impl Tabs {
 
     fn iter(&self) -> slice::Iter<'_, Tab> {
         self.tabs.iter()
+    }
+
+    fn surrounding_tabs(&self, id: TabIdentifier) -> (Option<&Tab>, Option<&Tab>) {
+        if let Some(pos) = self.tabs.iter().position(|tab| tab.id == id) {
+            let left = pos.checked_sub(1).and_then(|i| self.tabs.get(i));
+            let right = self.tabs.get(pos + 1);
+            (left, right)
+        } else {
+            (None, None)
+        }
+    }
+
+    fn remove(&mut self, id: TabIdentifier) -> Option<Tab> {
+        let pos = self.tabs.iter().position(|tab| tab.id == id)?;
+        Some(self.tabs.remove(pos))
     }
 
     fn get(&self, id: TabIdentifier) -> Option<&Tab> {
@@ -324,7 +355,8 @@ impl Tab {
         match resp {
             Ok(content) => {
                 let uri = Uri::file(&self.file.path);
-                let model = TextModel::create(&content, None, Some(&uri));
+                let model = TextModel::get_or_create(&uri, &content, None)
+                    .expect("failed to create text model");
                 self.model = Some(model);
                 *state = ContentState::Idle;
             }

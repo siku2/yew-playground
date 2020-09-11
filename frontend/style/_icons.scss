@@ -19,6 +19,8 @@
   white-space: nowrap;
   direction: ltr;
 
+  vertical-align: middle;
+
   /* Support for all WebKit browsers. */
   -webkit-font-smoothing: antialiased;
   /* Support for Safari and Chrome. */
@@ -56,5 +58,17 @@
     &.md-inactive {
       color: rgba(255, 255, 255, 0.3);
     }
+  }
+}
+
+.mdi-button {
+  background-color: unset;
+  border: 0;
+  color: var(--icon-color);
+  line-height: 0;
+  padding: 0;
+
+  &:hover {
+    cursor: pointer;
   }
 }
